@@ -60,6 +60,18 @@ impl ProcessorStatus {
             | self.C;
     }
 
+    pub fn set_status(&mut self, status: u8) {
+        let operator: u8 = 0b0000_0001;
+        self.N = status >> 7 & operator;
+        self.V = status >> 6 & operator;
+        self.U = status >> 5 & operator;
+        self.B = status >> 4 & operator;
+        self.D = status >> 3 & operator;
+        self.I = status >> 2 & operator;
+        self.Z = status >> 1 & operator;
+        self.C = status & operator;
+    }
+
     pub fn set_overflow(&mut self) {
         self.V = 0x01;
     }
@@ -114,5 +126,13 @@ impl ProcessorStatus {
 
     pub fn unset_carry(&mut self) {
         self.C = 0x00;
+    }
+
+    pub fn set_negative(&mut self) {
+        self.N = 0x01;
+    }
+
+    pub fn unset_negative(&mut self) {
+        self.N = 0x00;
     }
 }
