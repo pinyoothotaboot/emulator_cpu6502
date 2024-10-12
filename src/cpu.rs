@@ -44,6 +44,7 @@ pub struct CPU {
     */
     status: ProcessorStatus,
     address_register: u16,
+    cycles: u16,
 }
 
 impl CPU {
@@ -60,6 +61,7 @@ impl CPU {
             decoder: None,
             status: ProcessorStatus::new(),
             address_register: 0x0000,
+            cycles: 2,
         }
     }
 
@@ -76,9 +78,22 @@ impl CPU {
 
         // Decoder operation instuction
         self.decoder = CPU_6502_OPERATION_CODES_MAP.get(&self.data).cloned();
+
+        // Cycle = Cycle - 1
+        self.cycles -= 1;
     }
 
-    fn execute(&mut self) {}
+    fn execute(&mut self) {
+        // Load 16-bit from program counter (PC) and set to address
+        self.address = self.pc.clone();
+
+        // Add one program counter (PC)
+        // PC = PC + 1
+        self.pc += 1;
+
+        // Load data from memory 8-bit.And store data
+        self.data = self.memory.read(&self.address);
+    }
 }
 
 impl ICPU for CPU {
@@ -108,7 +123,43 @@ impl ICPU for CPU {
         self.stack_pointer = 0x00FD;
     }
 
-    fn run(&mut self) {}
+    fn run(&mut self) {
+        while self.cycles > 0 {
+            // State fetch
+            self.fetch();
+
+            match self.decoder {
+                Some(instruction) => {
+                    match instruction.code {
+                        /* LDA - Load accumulator */
+                        0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
+                            self.execute();
+                            self.LDA();
+                            self.cycles -= 1;
+                        }
+                        /* LDX Load X Register */
+                        0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
+                            self.execute();
+                            self.LDX();
+                            self.cycles -= 1;
+                        }
+                        /* LDY Load Y Register */
+                        0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
+                            self.execute();
+                            self.LDY();
+                            self.cycles -= 1;
+                        }
+                        _ => {
+                            self.cycles -= 1;
+                        }
+                    }
+                }
+                None => {
+                    panic!("Not found instruction");
+                }
+            }
+        }
+    }
 }
 
 impl IBus for CPU {
@@ -408,5 +459,139 @@ impl CPU {
     fn SEI(&mut self) {
         // I = 1
         self.status.set_interrupt_disable();
+    }
+}
+
+/**
+ * AXY Register Instructions
+ */
+impl CPU {
+    /**
+    *  LDA - Load Accumulator
+       A,Z,N = M
+
+       Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if A = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of A is set
+
+       Affects Flags: N Z
+
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     LDA #$44      $A9  2   2
+       Zero Page     LDA $44       $A5  2   3
+       Zero Page,X   LDA $44,X     $B5  2   4
+       Absolute      LDA $4400     $AD  3   4
+       Absolute,X    LDA $4400,X   $BD  3   4+
+       Absolute,Y    LDA $4400,Y   $B9  3   4+
+       Indirect,X    LDA ($44,X)   $A1  2   6
+       Indirect,Y    LDA ($44),Y   $B1  2   5+
+
+       + add 1 cycle if page boundary crossed
+    */
+    fn LDA(&mut self) {
+        // Loads a byte of memory into the accumulator
+        // A = data
+        self.accumulator = self.data;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if A = 0
+        if self.accumulator == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of A is set
+        if self.accumulator & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  LDX - Load X Register
+       X,Z,N = M
+
+       Loads a byte of memory into the X register setting the zero and negative flags as appropriate.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if X = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of X is set
+
+       LDX (LoaD X register)
+       Affects Flags: N Z
+
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     LDX #$44      $A2  2   2
+       Zero Page     LDX $44       $A6  2   3
+       Zero Page,Y   LDX $44,Y     $B6  2   4
+       Absolute      LDX $4400     $AE  3   4
+       Absolute,Y    LDX $4400,Y   $BE  3   4+
+
+       + add 1 cycle if page boundary crossed
+    */
+    fn LDX(&mut self) {
+        // Loads a byte of memory into the X register
+        // X = data
+        self.x_reg = self.data;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if X = 0
+        if self.x_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of X is set
+        if self.x_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  LDY - Load Y Register
+       Y,Z,N = M
+
+       Loads a byte of memory into the Y register setting the zero and negative flags as appropriate.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if Y = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of Y is set
+
+       Affects Flags: N Z
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     LDY #$44      $A0  2   2
+       Zero Page     LDY $44       $A4  2   3
+       Zero Page,X   LDY $44,X     $B4  2   4
+       Absolute      LDY $4400     $AC  3   4
+       Absolute,X    LDY $4400,X   $BC  3   4+
+
+       + add 1 cycle if page boundary crossed
+    */
+    fn LDY(&mut self) {
+        // Loads a byte of memory into the Y register
+        // Y = data
+        self.y_reg = self.data;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if Y = 0
+        if self.y_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of Y is set
+        if self.y_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
     }
 }
