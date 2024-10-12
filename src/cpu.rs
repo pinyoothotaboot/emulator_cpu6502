@@ -251,3 +251,162 @@ impl CPU {
         self.status.set_status(data);
     }
 }
+
+/**
+ * Status Register Instructions
+ */
+impl CPU {
+    /**
+    *  CLC - Clear Carry Flag
+       C = 0
+
+       Set the carry flag to zero.
+
+       C	Carry Flag	Set to 0
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         CLC         $18  1   2
+    */
+    fn CLC(&mut self) {
+        // C = 0
+        self.status.unset_carry();
+    }
+
+    /**
+    *  CLD - Clear Decimal Mode
+       D = 0
+
+       Sets the decimal mode flag to zero.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Set to 0
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         CLD         $D8  1   2
+    */
+    fn CLD(&mut self) {
+        // D = 0
+        self.status.unset_decimal_mode();
+    }
+
+    /**
+    *  CLI - Clear Interrupt Disable
+       I = 0
+
+       Clears the interrupt disable flag allowing normal interrupt requests to be serviced.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Set to 0
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         CLI         $58  1   2
+    */
+    fn CLI(&mut self) {
+        // I = 0
+        self.status.unset_interrupt_disable();
+    }
+
+    /**
+    *  CLV - Clear Overflow Flag
+       V = 0
+
+       Clears the overflow flag.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Set to 0
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         CLV         $B8  1   2
+    */
+    fn CLV(&mut self) {
+        // V = 0
+        self.status.unset_overflow();
+    }
+
+    /**
+    *  SEC - Set Carry Flag
+       C = 1
+
+       Set the carry flag to one.
+
+       C	Carry Flag	Set to 1
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         SEC         $38  1   2
+    */
+    fn SEC(&mut self) {
+        // C = 1
+        self.status.set_carry();
+    }
+
+    /**
+    *  SED - Set Decimal Flag
+       D = 1
+
+       Set the decimal mode flag to one.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Set to 1
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         SED         $F8  1   2
+    */
+    fn SED(&mut self) {
+        // D = 1
+        self.status.set_decimal_mode();
+    }
+
+    /**
+    *  SEI - Set Interrupt Disable
+       I = 1
+
+       Set the interrupt disable flag to one.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Set to 1
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         SEI         $78  1   2
+    */
+    fn SEI(&mut self) {
+        // I = 1
+        self.status.set_interrupt_disable();
+    }
+}
