@@ -1,3 +1,4 @@
+use crate::constants::START_STACK_POINTER;
 use crate::instruction::Instruction;
 use crate::instruction::CPU_6502_OPERATION_CODES_MAP;
 use crate::interface::{IBus, ICPU};
@@ -146,7 +147,7 @@ impl CPU {
     */
     fn PHA(&mut self) {
         // A -> Stack
-        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+        let addr_sp: u16 = (START_STACK_POINTER + self.stack_pointer as u16 & 0x00FF).into();
 
         // Write Accumulator to memory
         // data = accumulator
@@ -177,7 +178,7 @@ impl CPU {
         // N V _ B D I Z C <-- Flag
         let status: u8 = self.status.get_status();
 
-        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+        let addr_sp: u16 = (START_STACK_POINTER + self.stack_pointer as u16 & 0x00FF).into();
         // Write process status to memory
         // data = process status
         self.write(&addr_sp, status);
@@ -206,7 +207,7 @@ impl CPU {
         self.stack_pointer += 1;
 
         // Pulls an 8 bit value from the stack and into the accumulator
-        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+        let addr_sp: u16 = (START_STACK_POINTER + self.stack_pointer as u16 & 0x00FF).into();
         self.accumulator = self.read(&addr_sp);
 
         // The zero and negative flags are set as appropriate.
@@ -244,7 +245,7 @@ impl CPU {
         self.stack_pointer += 1;
 
         // Pulls an 8 bit value from the stack and into the processor flags.
-        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+        let addr_sp: u16 = (START_STACK_POINTER + self.stack_pointer as u16 & 0x00FF).into();
         let data: u8 = self.read(&addr_sp);
 
         self.status.set_status(data);
