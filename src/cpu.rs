@@ -19,7 +19,7 @@ pub struct CPU {
        NES Stack (as all stacks) grows from top to bottom: when a byte gets pushed to the stack,
        SP register decrements. When a byte is retrieved from the stack, SP register increments.
     */
-    stack: Stack,
+    stack_pointer: u8,
     /*
        Index Register X (X) - used as an offset in specific memory addressing modes (more on this later).
        Can be used for auxiliary storage needs (holding temp values, being used as a counter, etc.)
@@ -52,7 +52,7 @@ impl CPU {
             address: 0x0000,
             memory: Memory::new(),
             data: 0x00,
-            stack: Stack::new(),
+            stack_pointer: 0x00,
             x_reg: 0x00,
             y_reg: 0x00,
             accumulator: 0x00,
@@ -98,11 +98,155 @@ impl ICPU for CPU {
         self.address = 0x0000;
 
         // Reset Address Register [Hi,Lo] 16-bit
-        self.address_register = 0x0000;
+        self.address_register = 0x00;
 
         // Reset decoder
         self.decoder = None;
+
+        // Reset stack pointer
+        self.stack_pointer = 0x00FD;
     }
 
     fn run(&mut self) {}
+}
+
+impl IBus for CPU {
+    fn read(&self, address: &u16) -> u8 {
+        return self.memory.read(address);
+    }
+
+    fn write(&mut self, address: &u16, data: u8) {
+        self.memory.write(address, data);
+    }
+}
+
+/**
+* Stack Instructions
+   These instructions are implied mode, have a length of one byte and require machine cycles as indicated.
+   The "PuLl" operations are known as "POP" on most other microprocessors. With the 6502,
+   the stack is always on page one ($100-$1FF) and works top down.
+*/
+impl CPU {
+    /**
+    *  PHA - Push Accumulator
+       Pushes a copy of the accumulator on to the stack.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         PHA         $48  1   3
+    */
+    fn PHA(&mut self) {
+        // A -> Stack
+        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+
+        // Write Accumulator to memory
+        // data = accumulator
+        self.write(&addr_sp, self.accumulator);
+
+        // S = S - 1
+        self.stack_pointer -= 1;
+    }
+
+    /**
+    *  PHP - Push Processor Status
+       Pushes a copy of the status flags on to the stack.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         PHP         $08  1   3
+    */
+    fn PHP(&mut self) {
+        // N V _ B D I Z C <-- Flag
+        let status: u8 = self.status.get_status();
+
+        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+        // Write process status to memory
+        // data = process status
+        self.write(&addr_sp, status);
+
+        // S = S - 1
+        self.stack_pointer -= 1;
+    }
+
+    /**
+    *  PLA - Pull Accumulator
+       Pulls an 8 bit value from the stack and into the accumulator. The zero and negative flags are set as appropriate.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if A = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of A is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         PLA         $68  1   4
+    */
+    fn PLA(&mut self) {
+        // S = S + 1
+        self.stack_pointer += 1;
+
+        // Pulls an 8 bit value from the stack and into the accumulator
+        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+        self.accumulator = self.read(&addr_sp);
+
+        // The zero and negative flags are set as appropriate.
+        // Z	Zero Flag	Set if A = 0
+        if self.accumulator - 0x00 == 0 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of A is set
+        if self.accumulator & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  PLP - Pull Processor Status
+       Pulls an 8 bit value from the stack and into the processor flags.
+       The flags will take on new states as determined by the value pulled.
+
+       Processor Status after use:
+
+       C	Carry Flag	Set from stack
+       Z	Zero Flag	Set from stack
+       I	Interrupt Disable	Set from stack
+       D	Decimal Mode Flag	Set from stack
+       B	Break Command	Set from stack
+       V	Overflow Flag	Set from stack
+       N	Negative Flag	Set from stack
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         PLP         $28  1   4
+    */
+    fn PLP(&mut self) {
+        // S = S + 1
+        self.stack_pointer += 1;
+
+        // Pulls an 8 bit value from the stack and into the processor flags.
+        let addr_sp: u16 = 0x0100 + self.stack_pointer & 0x00FF;
+        let data: u8 = self.read(&addr_sp);
+
+        self.status.set_status(data);
+    }
 }
