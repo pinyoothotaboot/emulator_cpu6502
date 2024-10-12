@@ -1,7 +1,7 @@
 use crate::instruction::Instruction;
 use crate::instruction::CPU_6502_OPERATION_CODES_MAP;
-use crate::interface::ICPU;
-use crate::memory::{IMemory, Memory};
+use crate::interface::{IBus, ICPU};
+use crate::memory::Memory;
 use crate::processor_status::ProcessorStatus;
 use crate::stack::Stack;
 pub struct CPU {
