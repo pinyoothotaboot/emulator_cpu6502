@@ -39,14 +39,14 @@ impl ProcessorStatus {
     }
 
     pub fn reset(&mut self) {
-        self.N = 0x00;
-        self.V = 0x00;
-        self.U = 0x00;
-        self.B = 0x00;
-        self.D = 0x00;
-        self.I = 0x00;
-        self.Z = 0x00;
-        self.C = 0x00;
+        self.N = 0x01;
+        self.V = 0x01;
+        self.U = 0x01;
+        self.B = 0x01;
+        self.D = 0x01;
+        self.I = 0x01;
+        self.Z = 0x01;
+        self.C = 0x01;
     }
 
     pub fn get_status(&self) -> u8 {

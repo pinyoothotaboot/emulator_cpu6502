@@ -1,4 +1,7 @@
+use std::time::{Duration, SystemTime};
+
 use crate::constants::START_STACK_POINTER;
+use crate::instruction;
 use crate::instruction::Instruction;
 use crate::instruction::CPU_6502_OPERATION_CODES_MAP;
 use crate::interface::{IBus, ICPU};
@@ -69,6 +72,7 @@ pub struct CPU {
     address_register: u16,
     cycles: u16,
     state: State,
+    prev_cycle_count: u16,
 }
 
 impl CPU {
@@ -86,8 +90,9 @@ impl CPU {
             instruction_reg: None,
             status: ProcessorStatus::new(),
             address_register: 0x0000,
-            cycles: 2,
+            cycles: 0x0000,
             state: State::Fetch,
+            prev_cycle_count: 0x0000,
         }
     }
 
@@ -130,6 +135,7 @@ impl CPU {
             .copied();
     }
 
+    // TODO :: Maybe not implement in global
     fn execute(&mut self) {
         // Load 16-bit from program counter (PC) and set to address
         // PC -> Address
@@ -148,6 +154,15 @@ impl CPU {
         // Load data from ROM
         self.data = self.read_rom(&self.address);
     }
+
+    fn update_clock(&mut self) {
+        match self.instruction_reg {
+            Some(instruction) => {
+                self.cycles += instruction.cycle as u16 & 0x00FF;
+            }
+            None => {}
+        }
+    }
 }
 
 impl CPU {
@@ -155,11 +170,27 @@ impl CPU {
         self.rom.display();
     }
 
-    fn debug(&self) {
+    fn debug(&self, state: &str) {
         println!("======================================");
-        println!("PC      = {:#04x?}", self.pc);
-        println!("Address = {:#04x?}", self.address);
-        println!("Data    = {:#02x?}", self.data);
+        println!("State         = {:?}", state);
+        println!("PC            = {:#04x?}", self.pc);
+        println!("Address       = {:#04x?}", self.address);
+        println!("Address Reg   = {:#04x?}", self.address_register);
+        println!("Data          = {:#02x?}", self.data);
+        match self.instruction_reg {
+            Some(instruction) => {
+                println!(
+                    "Decoded       = {:?} ${:#02x?}",
+                    instruction.name, instruction.code
+                );
+            }
+            None => {}
+        }
+        println!("X Reg         = {:#02x?}", self.x_reg);
+        println!("Y Reg         = {:#02x?}", self.y_reg);
+        println!("Accumulator   = {:#02x?}", self.accumulator);
+        println!("Status        = {:#010b}", self.status.get_status());
+        println!("Cycle         = {:?}", self.cycles);
     }
 }
 
@@ -169,6 +200,15 @@ impl ICPU for CPU {
         // Ref : https://www.c64-wiki.com/wiki/Reset_(Process)
         //self.pc = 0xFFFC;
         self.pc = 0x0600;
+
+        // Initial Clock
+        let data = self.read_rom(&self.pc);
+        match CPU_6502_OPERATION_CODES_MAP.get(&data).cloned() {
+            Some(instruction) => {
+                self.cycles = instruction.cycle as u16;
+            }
+            None => {}
+        }
 
         // Reset processor status
         self.status.reset();
@@ -192,26 +232,32 @@ impl ICPU for CPU {
     }
 
     fn run(&mut self) {
-        while self.cycles > 0 {
+        loop {
+            let duration_since_epoch = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap();
+            let cuurrent_time: u128 = duration_since_epoch.as_nanos();
+
+            // Process Instruction With State
             match self.state {
                 State::Fetch => {
                     // State fetch
                     self.fetch();
                     self.state = State::Decode;
-                    self.debug();
-                    println!("Run Fetch...");
+                    self.debug("Fetch");
                 }
                 State::Decode => {
                     // State Decode
                     self.decode();
-                    self.debug();
-                    println!("Run Decoder..");
+                    // Update clock cycle
+                    self.update_clock();
+                    self.debug("Decode");
                     self.state = State::Execute;
                 }
                 State::Execute => {
-                    println!("Run Handle Instruction..");
                     // Handle Instruction
-                    self.handle_instruction();
+                    self.execute_instruction();
+                    self.debug("Execute");
                 }
                 State::Exit => {
                     break;
@@ -220,32 +266,44 @@ impl ICPU for CPU {
                     panic!("Program has problem!.");
                 }
             }
+            /**
+             * Ref : https://www.cs.cornell.edu/~kt/post/6502-7/
+             */
+            let cycle_count = self.cycles.clone();
+            let new_cycle = cycle_count - self.prev_cycle_count;
+            let elaped_time = (480 * new_cycle) as u128;
+            while SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                - cuurrent_time
+                < elaped_time
+            {
+                continue;
+            }
+
+            // Update prev count
+            self.prev_cycle_count = cycle_count;
         }
     }
 }
 
 impl CPU {
-    fn handle_instruction(&mut self) {
+    fn execute_instruction(&mut self) {
         match self.instruction_reg {
             Some(instruction) => {
                 match instruction.code {
                     /* LDA - Load accumulator */
                     0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
-                        self.execute();
                         self.LDA();
-                        self.cycles -= 1;
                     }
                     /* LDX Load X Register */
                     0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
-                        self.execute();
                         self.LDX();
-                        self.cycles -= 1;
                     }
                     /* LDY Load Y Register */
                     0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
-                        self.execute();
                         self.LDY();
-                        self.cycles -= 1;
                     }
                     /* CPX Compare X Register */
                     0xE0 | 0xE4 | 0xEC => {
@@ -312,7 +370,7 @@ impl CPU {
                         self.TYA();
                     }
                     _ => {
-                        self.cycles -= 1;
+                        self.state = State::Exit;
                     }
                 }
             }
