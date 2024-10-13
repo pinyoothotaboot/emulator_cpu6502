@@ -4,7 +4,16 @@ use crate::instruction::CPU_6502_OPERATION_CODES_MAP;
 use crate::interface::{IBus, ICPU};
 use crate::memory::Memory;
 use crate::processor_status::ProcessorStatus;
+use crate::rom::Rom;
 use crate::stack::Stack;
+
+pub enum State {
+    Fetch,
+    Decode,
+    Execute,
+    Exit,
+}
+
 pub struct CPU {
     /*
        Program Counter (PC) - holds the address for
@@ -12,7 +21,17 @@ pub struct CPU {
     */
     pc: u16,
     address: u16,
+    /**
+     * The ROM load datas
+     */
+    rom: Rom,
+    /**
+     * The CPU6502 memory stack for R/W
+     */
     memory: Memory,
+    /**
+     * The word 8-bit
+     */
     data: u8,
     /*
        Stack Pointer - Memory space [0x0100 .. 0x1FF] is used for stack.
@@ -35,7 +54,10 @@ pub struct CPU {
        and memory access operations. It used as an input parameter for some operations.
     */
     accumulator: u8,
-    decoder: Option<&'static Instruction>,
+    /**
+     * CPU6502 instruction decoded
+     */
+    instruction_reg: Option<&'static Instruction>,
     /*
        Processor status (P) - 8-bit register represents 7 status flags
        that can be set or unset depending on the result of
@@ -43,56 +65,101 @@ pub struct CPU {
        if the result of an operation is 0, and is unset/erased (0) otherwise)
     */
     status: ProcessorStatus,
+
     address_register: u16,
     cycles: u16,
+    state: State,
 }
 
 impl CPU {
-    pub fn new() -> Self {
+    pub fn new(rom: Rom) -> Self {
         CPU {
             pc: 0x0000,
             address: 0x0000,
             memory: Memory::new(),
+            rom,
             data: 0x00,
             stack_pointer: 0x00,
             x_reg: 0x00,
             y_reg: 0x00,
             accumulator: 0x00,
-            decoder: None,
+            instruction_reg: None,
             status: ProcessorStatus::new(),
             address_register: 0x0000,
             cycles: 2,
+            state: State::Fetch,
         }
     }
 
     fn fetch(&mut self) {
         // Load 16-bit from program counter (PC) and set to address
+        // PC -> Address
+        // Example :
+        //           PC = 0x0000
+        //           Address = 0x0000
         self.address = self.pc.clone();
 
         // Add one program counter (PC)
         // PC = PC + 1
+        // Example :
+        //           PC = 0x0000 + 0x0001
+        //           PC = 0x0001
         self.pc += 1;
 
-        // Load data from memory 8-bit.And store data
-        self.data = self.memory.read(&self.address);
+        // Load data from cpu6502 instruction memory 8-bit.And store data
+        // Instrunction Memory 8-bit -> Data
+        // Example :
+        //           Memory = 0x0000 : 4C
+        //           Data   = 0x4C
+        self.data = self.read_rom(&self.address);
+    }
 
+    fn decode(&mut self) {
         // Decoder operation instuction
-        self.decoder = CPU_6502_OPERATION_CODES_MAP.get(&self.data).cloned();
-
-        // Cycle = Cycle - 1
-        self.cycles -= 1;
+        // Example :
+        //           Data = 0x4C
+        //           Instruction Register =
+        //                                   code  = 0x4C
+        //                                   name  = JMP
+        //                                   len   = 3 (Byte)
+        //                                   Cycle = 3  (tim)
+        //
+        let address_instruction: u8 = self.read_rom(&self.address);
+        self.instruction_reg = CPU_6502_OPERATION_CODES_MAP
+            .get(&address_instruction)
+            .copied();
     }
 
     fn execute(&mut self) {
         // Load 16-bit from program counter (PC) and set to address
+        // PC -> Address
+        // Example :
+        //           PC = 0x0001
+        //           Address = 0x0001
         self.address = self.pc.clone();
 
         // Add one program counter (PC)
         // PC = PC + 1
+        // Example :
+        //           PC = 0x0001 + 0x0001
+        //           PC = 0x0002
         self.pc += 1;
 
-        // Load data from memory 8-bit.And store data
-        self.data = self.memory.read(&self.address);
+        // Load data from ROM
+        self.data = self.read_rom(&self.address);
+    }
+}
+
+impl CPU {
+    pub fn display_rom(&self) {
+        self.rom.display();
+    }
+
+    fn debug(&self) {
+        println!("======================================");
+        println!("PC      = {:#04x?}", self.pc);
+        println!("Address = {:#04x?}", self.address);
+        println!("Data    = {:#02x?}", self.data);
     }
 }
 
@@ -100,7 +167,8 @@ impl ICPU for CPU {
     fn reset(&mut self) {
         // Reset program counter
         // Ref : https://www.c64-wiki.com/wiki/Reset_(Process)
-        self.pc = 0xFFFC;
+        //self.pc = 0xFFFC;
+        self.pc = 0x0600;
 
         // Reset processor status
         self.status.reset();
@@ -117,7 +185,7 @@ impl ICPU for CPU {
         self.address_register = 0x00;
 
         // Reset decoder
-        self.decoder = None;
+        self.instruction_reg = None;
 
         // Reset stack pointer
         self.stack_pointer = 0x00FD;
@@ -125,107 +193,137 @@ impl ICPU for CPU {
 
     fn run(&mut self) {
         while self.cycles > 0 {
-            // State fetch
-            self.fetch();
-
-            match self.decoder {
-                Some(instruction) => {
-                    match instruction.code {
-                        /* LDA - Load accumulator */
-                        0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
-                            self.execute();
-                            self.LDA();
-                            self.cycles -= 1;
-                        }
-                        /* LDX Load X Register */
-                        0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
-                            self.execute();
-                            self.LDX();
-                            self.cycles -= 1;
-                        }
-                        /* LDY Load Y Register */
-                        0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
-                            self.execute();
-                            self.LDY();
-                            self.cycles -= 1;
-                        }
-                        /* CPX Compare X Register */
-                        0xE0 | 0xE4 | 0xEC => {
-                            self.CPX();
-                        }
-                        /* CPY Compare Y Register */
-                        0xC0 | 0xC4 | 0xCC => {
-                            self.CPY();
-                        }
-                        /* DEX Decrement X Register */
-                        0xCA => {
-                            self.DEX();
-                        }
-                        /* DEY Decrement Y Register */
-                        0x88 => {
-                            self.DEY();
-                        }
-                        /* INC  Increment Memory */
-                        0xE6 | 0xF6 | 0xEE | 0xFE => {
-                            self.INC();
-                        }
-                        /* INX - Increment X Register */
-                        0xE8 => {
-                            self.INX();
-                        }
-                        /* INY - Increment Y Register */
-                        0xC8 => {
-                            self.INY();
-                        }
-                        /* STA - Store Accumulator */
-                        0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
-                            self.STA();
-                        }
-                        /* STX - Store X Register */
-                        0x86 | 0x96 | 0x8E => {
-                            self.STX();
-                        }
-                        /* STY Store Y Register */
-                        0x84 | 0x94 | 0x8C => {
-                            self.STY();
-                        }
-                        /* TAX - Transfer Accumulator to X */
-                        0xAA => {
-                            self.TAX();
-                        }
-                        /* TAY - Transfer Accumulator to Y */
-                        0xA8 => {
-                            self.TAY();
-                        }
-                        /* TSX - Transfer Stack Pointer to X */
-                        0xBA => {
-                            self.TSX();
-                        }
-                        /* TXA - Transfer X to Accumulator */
-                        0x8A => {
-                            self.TXA();
-                        }
-                        /* TXS - Transfer X to Stack Pointer */
-                        0x9A => {
-                            self.TXS();
-                        }
-                        /* TYA - Transfer Y to Accumulator */
-                        0x98 => {
-                            self.TYA();
-                        }
-                        _ => {
-                            self.cycles -= 1;
-                        }
-                    }
+            match self.state {
+                State::Fetch => {
+                    // State fetch
+                    self.fetch();
+                    self.state = State::Decode;
+                    self.debug();
+                    println!("Run Fetch...");
                 }
-                None => {
-                    panic!("Not found instruction");
+                State::Decode => {
+                    // State Decode
+                    self.decode();
+                    self.debug();
+                    println!("Run Decoder..");
+                    self.state = State::Execute;
+                }
+                State::Execute => {
+                    println!("Run Handle Instruction..");
+                    // Handle Instruction
+                    self.handle_instruction();
+                }
+                State::Exit => {
+                    break;
+                }
+                _ => {
+                    panic!("Program has problem!.");
                 }
             }
         }
     }
 }
 
+impl CPU {
+    fn handle_instruction(&mut self) {
+        match self.instruction_reg {
+            Some(instruction) => {
+                match instruction.code {
+                    /* LDA - Load accumulator */
+                    0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
+                        self.execute();
+                        self.LDA();
+                        self.cycles -= 1;
+                    }
+                    /* LDX Load X Register */
+                    0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
+                        self.execute();
+                        self.LDX();
+                        self.cycles -= 1;
+                    }
+                    /* LDY Load Y Register */
+                    0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
+                        self.execute();
+                        self.LDY();
+                        self.cycles -= 1;
+                    }
+                    /* CPX Compare X Register */
+                    0xE0 | 0xE4 | 0xEC => {
+                        self.CPX();
+                    }
+                    /* CPY Compare Y Register */
+                    0xC0 | 0xC4 | 0xCC => {
+                        self.CPY();
+                    }
+                    /* DEX Decrement X Register */
+                    0xCA => {
+                        self.DEX();
+                    }
+                    /* DEY Decrement Y Register */
+                    0x88 => {
+                        self.DEY();
+                    }
+                    /* INC  Increment Memory */
+                    0xE6 | 0xF6 | 0xEE | 0xFE => {
+                        self.INC();
+                    }
+                    /* INX - Increment X Register */
+                    0xE8 => {
+                        self.INX();
+                    }
+                    /* INY - Increment Y Register */
+                    0xC8 => {
+                        self.INY();
+                    }
+                    /* STA - Store Accumulator */
+                    0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
+                        self.STA();
+                    }
+                    /* STX - Store X Register */
+                    0x86 | 0x96 | 0x8E => {
+                        self.STX();
+                    }
+                    /* STY Store Y Register */
+                    0x84 | 0x94 | 0x8C => {
+                        self.STY();
+                    }
+                    /* TAX - Transfer Accumulator to X */
+                    0xAA => {
+                        self.TAX();
+                    }
+                    /* TAY - Transfer Accumulator to Y */
+                    0xA8 => {
+                        self.TAY();
+                    }
+                    /* TSX - Transfer Stack Pointer to X */
+                    0xBA => {
+                        self.TSX();
+                    }
+                    /* TXA - Transfer X to Accumulator */
+                    0x8A => {
+                        self.TXA();
+                    }
+                    /* TXS - Transfer X to Stack Pointer */
+                    0x9A => {
+                        self.TXS();
+                    }
+                    /* TYA - Transfer Y to Accumulator */
+                    0x98 => {
+                        self.TYA();
+                    }
+                    _ => {
+                        self.cycles -= 1;
+                    }
+                }
+            }
+            None => {
+                panic!("Not found instruction");
+            }
+        }
+    }
+}
+
+/** R/W Memory */
 impl IBus for CPU {
     fn read(&self, address: &u16) -> u8 {
         return self.memory.read(address);
@@ -235,6 +333,14 @@ impl IBus for CPU {
         self.memory.write(address, data);
     }
 }
+
+/** R Rom */
+impl CPU {
+    fn read_rom(&self, address: &u16) -> u8 {
+        return self.rom.read(address);
+    }
+}
+
 /**
  * References instructions
  * - https://www.nesdev.org/obelisk-6502-guide/reference.html
