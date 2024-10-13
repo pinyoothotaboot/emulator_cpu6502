@@ -44,6 +44,7 @@ pub struct CPU {
     */
     status: ProcessorStatus,
     address_register: u16,
+    cycles: u16,
 }
 
 impl CPU {
@@ -60,6 +61,7 @@ impl CPU {
             decoder: None,
             status: ProcessorStatus::new(),
             address_register: 0x0000,
+            cycles: 2,
         }
     }
 
@@ -76,9 +78,22 @@ impl CPU {
 
         // Decoder operation instuction
         self.decoder = CPU_6502_OPERATION_CODES_MAP.get(&self.data).cloned();
+
+        // Cycle = Cycle - 1
+        self.cycles -= 1;
     }
 
-    fn execute(&mut self) {}
+    fn execute(&mut self) {
+        // Load 16-bit from program counter (PC) and set to address
+        self.address = self.pc.clone();
+
+        // Add one program counter (PC)
+        // PC = PC + 1
+        self.pc += 1;
+
+        // Load data from memory 8-bit.And store data
+        self.data = self.memory.read(&self.address);
+    }
 }
 
 impl ICPU for CPU {
@@ -108,7 +123,107 @@ impl ICPU for CPU {
         self.stack_pointer = 0x00FD;
     }
 
-    fn run(&mut self) {}
+    fn run(&mut self) {
+        while self.cycles > 0 {
+            // State fetch
+            self.fetch();
+
+            match self.decoder {
+                Some(instruction) => {
+                    match instruction.code {
+                        /* LDA - Load accumulator */
+                        0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
+                            self.execute();
+                            self.LDA();
+                            self.cycles -= 1;
+                        }
+                        /* LDX Load X Register */
+                        0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
+                            self.execute();
+                            self.LDX();
+                            self.cycles -= 1;
+                        }
+                        /* LDY Load Y Register */
+                        0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
+                            self.execute();
+                            self.LDY();
+                            self.cycles -= 1;
+                        }
+                        /* CPX Compare X Register */
+                        0xE0 | 0xE4 | 0xEC => {
+                            self.CPX();
+                        }
+                        /* CPY Compare Y Register */
+                        0xC0 | 0xC4 | 0xCC => {
+                            self.CPY();
+                        }
+                        /* DEX Decrement X Register */
+                        0xCA => {
+                            self.DEX();
+                        }
+                        /* DEY Decrement Y Register */
+                        0x88 => {
+                            self.DEY();
+                        }
+                        /* INC  Increment Memory */
+                        0xE6 | 0xF6 | 0xEE | 0xFE => {
+                            self.INC();
+                        }
+                        /* INX - Increment X Register */
+                        0xE8 => {
+                            self.INX();
+                        }
+                        /* INY - Increment Y Register */
+                        0xC8 => {
+                            self.INY();
+                        }
+                        /* STA - Store Accumulator */
+                        0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
+                            self.STA();
+                        }
+                        /* STX - Store X Register */
+                        0x86 | 0x96 | 0x8E => {
+                            self.STX();
+                        }
+                        /* STY Store Y Register */
+                        0x84 | 0x94 | 0x8C => {
+                            self.STY();
+                        }
+                        /* TAX - Transfer Accumulator to X */
+                        0xAA => {
+                            self.TAX();
+                        }
+                        /* TAY - Transfer Accumulator to Y */
+                        0xA8 => {
+                            self.TAY();
+                        }
+                        /* TSX - Transfer Stack Pointer to X */
+                        0xBA => {
+                            self.TSX();
+                        }
+                        /* TXA - Transfer X to Accumulator */
+                        0x8A => {
+                            self.TXA();
+                        }
+                        /* TXS - Transfer X to Stack Pointer */
+                        0x9A => {
+                            self.TXS();
+                        }
+                        /* TYA - Transfer Y to Accumulator */
+                        0x98 => {
+                            self.TYA();
+                        }
+                        _ => {
+                            self.cycles -= 1;
+                        }
+                    }
+                }
+                None => {
+                    panic!("Not found instruction");
+                }
+            }
+        }
+    }
 }
 
 impl IBus for CPU {
@@ -120,7 +235,11 @@ impl IBus for CPU {
         self.memory.write(address, data);
     }
 }
-
+/**
+ * References instructions
+ * - https://www.nesdev.org/obelisk-6502-guide/reference.html
+ * - http://www.6502.org/tutorials/6502opcodes.html
+ */
 /**
 * Stack Instructions
    These instructions are implied mode, have a length of one byte and require machine cycles as indicated.
@@ -408,5 +527,718 @@ impl CPU {
     fn SEI(&mut self) {
         // I = 1
         self.status.set_interrupt_disable();
+    }
+}
+
+/**
+ * AXY Register Instructions
+ */
+impl CPU {
+    /**
+    *  LDA - Load Accumulator
+       A,Z,N = M
+
+       Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if A = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of A is set
+
+       Affects Flags: N Z
+
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     LDA #$44      $A9  2   2
+       Zero Page     LDA $44       $A5  2   3
+       Zero Page,X   LDA $44,X     $B5  2   4
+       Absolute      LDA $4400     $AD  3   4
+       Absolute,X    LDA $4400,X   $BD  3   4+
+       Absolute,Y    LDA $4400,Y   $B9  3   4+
+       Indirect,X    LDA ($44,X)   $A1  2   6
+       Indirect,Y    LDA ($44),Y   $B1  2   5+
+
+       + add 1 cycle if page boundary crossed
+    */
+    fn LDA(&mut self) {
+        // Loads a byte of memory into the accumulator
+        // A = data
+        self.accumulator = self.data;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if A = 0
+        if self.accumulator == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of A is set
+        if self.accumulator & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  LDX - Load X Register
+       X,Z,N = M
+
+       Loads a byte of memory into the X register setting the zero and negative flags as appropriate.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if X = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of X is set
+
+       LDX (LoaD X register)
+       Affects Flags: N Z
+
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     LDX #$44      $A2  2   2
+       Zero Page     LDX $44       $A6  2   3
+       Zero Page,Y   LDX $44,Y     $B6  2   4
+       Absolute      LDX $4400     $AE  3   4
+       Absolute,Y    LDX $4400,Y   $BE  3   4+
+
+       + add 1 cycle if page boundary crossed
+    */
+    fn LDX(&mut self) {
+        // Loads a byte of memory into the X register
+        // X = data
+        self.x_reg = self.data;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if X = 0
+        if self.x_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of X is set
+        if self.x_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  LDY - Load Y Register
+       Y,Z,N = M
+
+       Loads a byte of memory into the Y register setting the zero and negative flags as appropriate.
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if Y = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of Y is set
+
+       Affects Flags: N Z
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     LDY #$44      $A0  2   2
+       Zero Page     LDY $44       $A4  2   3
+       Zero Page,X   LDY $44,X     $B4  2   4
+       Absolute      LDY $4400     $AC  3   4
+       Absolute,X    LDY $4400,X   $BC  3   4+
+
+       + add 1 cycle if page boundary crossed
+    */
+    fn LDY(&mut self) {
+        // Loads a byte of memory into the Y register
+        // Y = data
+        self.y_reg = self.data;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if Y = 0
+        if self.y_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of Y is set
+        if self.y_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  CPX - Compare X Register
+       Z,C,N = X-M
+
+       This instruction compares the contents of the X register with another memory held value
+       and sets the zero and carry flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Set if X >= M
+       Z	Zero Flag	Set if X = M
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of the result is set
+
+       Affects Flags: N Z C
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     CPX #$44      $E0  2   2
+       Zero Page     CPX $44       $E4  2   3
+       Absolute      CPX $4400     $EC  3   4
+
+       Operation and flag results are identical to equivalent mode accumulator CMP ops.
+    */
+    fn CPX(&mut self) {
+        // This instruction compares the contents of the X register with another memory held value
+        // X - M
+        let temp: u8 = self.x_reg - self.data;
+
+        // C	Carry Flag	Set if X >= M
+        if self.x_reg >= self.data {
+            self.status.set_carry();
+        }
+
+        // Z	Zero Flag	Set if X = M
+        if temp == 0 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of the result is set
+        if temp & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  CPY - Compare Y Register
+       Z,C,N = Y-M
+
+       This instruction compares the contents of the Y register with another memory held value and sets the zero and carry flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Set if Y >= M
+       Z	Zero Flag	Set if Y = M
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of the result is set
+
+       CPY (ComPare Y register)
+       Affects Flags: N Z C
+
+       MODE           SYNTAX       HEX LEN TIM
+       Immediate     CPY #$44      $C0  2   2
+       Zero Page     CPY $44       $C4  2   3
+       Absolute      CPY $4400     $CC  3   4
+
+       Operation and flag results are identical to equivalent mode accumulator CMP ops.
+    */
+    fn CPY(&mut self) {
+        // This instruction compares the contents of the Y register with another memory held value
+        // Y - M
+        let temp: u8 = self.y_reg - self.data;
+
+        // C	Carry Flag	Set if Y >= M
+        if self.y_reg >= self.data {
+            self.status.set_carry();
+        }
+
+        // Z	Zero Flag	Set if Y = M
+        if temp == 0 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of the result is set
+        if temp & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  DEX - Decrement X Register
+       X,Z,N = X-1
+
+       Subtracts one from the X register setting the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if X is zero
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of X is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied        DEX          $CA  1   2
+    */
+    fn DEX(&mut self) {
+        // Subtracts one from the X register
+        self.x_reg -= 1;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if X is zero
+        if self.x_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of X is set
+        if self.x_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  DEY - Decrement Y Register
+       Y,Z,N = Y-1
+
+       Subtracts one from the Y register setting the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if Y is zero
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of Y is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         DEY         $88  1   2
+    */
+    fn DEY(&mut self) {
+        // Subtracts one from the Y register
+        // Y = Y - 1
+        self.y_reg -= 1;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if Y is zero
+        if self.y_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of Y is set
+        if self.y_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  INC - Increment Memory
+       M,Z,N = M+1
+
+       Adds one to the value held at a specified memory location setting the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if result is zero
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of the result is set
+
+       Affects Flags: N Z
+       MODE           SYNTAX       HEX LEN TIM
+       Zero Page     INC $44       $E6  2   5
+       Zero Page,X   INC $44,X     $F6  2   6
+       Absolute      INC $4400     $EE  3   6
+       Absolute,X    INC $4400,X   $FE  3   7
+    */
+    fn INC(&mut self) {
+        // Adds one to the value held at a specified memory location
+        // M = M + 1
+        let temp: u8 = self.data + 1;
+
+        // Write to mem
+        let address: u16 = self.address.clone();
+        self.write(&address, temp);
+
+        // Z	Zero Flag	Set if result is zero
+        if temp == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of the result is set
+        if temp & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  INX - Increment X Register
+       X,Z,N = X+1
+
+       Adds one to the X register setting the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if X is zero
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of X is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         INX         $E8  1   2
+    */
+    fn INX(&mut self) {
+        // Adds one to the X register
+        // X = X + 1
+        self.x_reg += 1;
+
+        // Z	Zero Flag	Set if X is zero
+        if self.x_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of X is set
+        if self.x_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  INY - Increment Y Register
+       Y,Z,N = Y+1
+
+       Adds one to the Y register setting the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if Y is zero
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of Y is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         INX         $C8  1   2
+    */
+    fn INY(&mut self) {
+        // Adds one to the Y register
+        // Y = Y + 1
+        self.y_reg += 1;
+
+        // setting the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if Y is zero
+        if self.y_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of Y is set
+        if self.y_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  STA - Store Accumulator
+       M = A
+
+       Stores the contents of the accumulator into memory.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       Affects Flags: none
+
+       MODE           SYNTAX       HEX LEN TIM
+       Zero Page     STA $44       $85  2   3
+       Zero Page,X   STA $44,X     $95  2   4
+       Absolute      STA $4400     $8D  3   4
+       Absolute,X    STA $4400,X   $9D  3   5
+       Absolute,Y    STA $4400,Y   $99  3   5
+       Indirect,X    STA ($44,X)   $81  2   6
+       Indirect,Y    STA ($44),Y   $91  2   6
+    */
+    fn STA(&mut self) {
+        // Stores the contents of the accumulator into memory.
+        // A -> M
+        let data: u8 = self.accumulator;
+        let address = self.address.clone();
+        self.write(&address, data);
+    }
+
+    /**
+    *  STX - Store X Register
+       M = X
+
+       Stores the contents of the X register into memory.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       Affects Flags: none
+
+       MODE           SYNTAX       HEX LEN TIM
+       Zero Page     STX $44       $86  2   3
+       Zero Page,Y   STX $44,Y     $96  2   4
+       Absolute      STX $4400     $8E  3   4
+    */
+    fn STX(&mut self) {
+        // Stores the contents of the X register into memory.
+        // X -> M
+        let data: u8 = self.x_reg;
+        let address = self.address.clone();
+        self.write(&address, data);
+    }
+
+    /**
+    *  STY - Store Y Register
+       M = Y
+
+       Stores the contents of the Y register into memory.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       Affects Flags: none
+
+       MODE           SYNTAX       HEX LEN TIM
+       Zero Page     STY $44       $84  2   3
+       Zero Page,X   STY $44,X     $94  2   4
+       Absolute      STY $4400     $8C  3   4
+    */
+    fn STY(&mut self) {
+        // Stores the contents of the Y register into memory.
+        // Y -> M
+        let data: u8 = self.y_reg;
+        let address = self.address.clone();
+        self.write(&address, data);
+    }
+
+    /**
+    *  TAX - Transfer Accumulator to X
+       X = A
+
+       Copies the current contents of the accumulator into the X register and sets the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if X = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of X is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         TAX         $AA  1   2
+    */
+    fn TAX(&mut self) {
+        //  Copies the current contents of the accumulator into the X register
+        // A -> X
+        self.x_reg = self.accumulator.clone();
+
+        // sets the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if X = 0
+        if self.x_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of X is set
+        if self.x_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  TAY - Transfer Accumulator to Y
+       Y = A
+
+       Copies the current contents of the accumulator into the Y register and sets the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if Y = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of Y is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         TAY         $A8  1   2
+    */
+    fn TAY(&mut self) {
+        // Copies the current contents of the accumulator into the Y register
+        // A -> Y
+        self.y_reg = self.accumulator.clone();
+
+        // sets the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if Y = 0
+        if self.y_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of Y is set
+        if self.y_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  TSX - Transfer Stack Pointer to X
+       X = S
+
+       Copies the current contents of the stack register into the X register and sets the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if X = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of X is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         TSX         $BA  1   2
+    */
+    fn TSX(&mut self) {
+        // Copies the current contents of the stack register into the X register
+        // X = S
+        self.x_reg = self.stack_pointer.clone();
+
+        // sets the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if X = 0
+        if self.x_reg == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of X is set
+        if self.x_reg & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  TXA - Transfer X to Accumulator
+       A = X
+
+       Copies the current contents of the X register into the accumulator and sets the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if A = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of A is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         TXA         $8A  1   2
+    */
+    fn TXA(&mut self) {
+        // Copies the current contents of the X register into the accumulator
+        // A = X
+        self.accumulator = self.x_reg.clone();
+
+        // sets the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if A = 0
+        if self.accumulator == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of A is set
+        if self.accumulator & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
+    }
+
+    /**
+    *  TXS - Transfer X to Stack Pointer
+       S = X
+
+       Copies the current contents of the X register into the stack register.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         TXS         $9A  1   2
+    */
+    fn TXS(&mut self) {
+        // Copies the current contents of the X register into the stack register.
+        self.x_reg = self.stack_pointer.clone();
+    }
+
+    /**
+    *  TYA - Transfer Y to Accumulator
+       A = Y
+
+       Copies the current contents of the Y register into the accumulator and sets the zero and negative flags as appropriate.
+
+       Processor Status after use:
+
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Set if A = 0
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Set if bit 7 of A is set
+
+       MODE           SYNTAX       HEX LEN TIM
+       Implied         TYA         $98  1   2
+    */
+    fn TYA(&mut self) {
+        // Copies the current contents of the Y register into the accumulator
+        // A = Y
+        self.accumulator = self.y_reg.clone();
+
+        // sets the zero and negative flags as appropriate.
+        // Z	Zero Flag	Set if A = 0
+        if self.accumulator == 0x00 {
+            self.status.set_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of A is set
+        if self.accumulator & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        }
     }
 }
