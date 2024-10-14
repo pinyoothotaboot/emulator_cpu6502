@@ -244,20 +244,21 @@ impl ICPU for CPU {
                     // State fetch
                     self.fetch();
                     self.state = State::Decode;
-                    self.debug("Fetch");
+                    //self.debug("Fetch");
                 }
                 State::Decode => {
                     // State Decode
                     self.decode();
                     // Update clock cycle
                     self.update_clock();
-                    self.debug("Decode");
+                    //self.debug("Decode");
                     self.state = State::Execute;
                 }
                 State::Execute => {
+                    //self.debug("Execute");
                     // Handle Instruction
                     self.execute_instruction();
-                    self.debug("Execute");
+                    //self.debug("Execute");
                 }
                 State::Exit => {
                     break;
@@ -368,6 +369,10 @@ impl CPU {
                     /* TYA - Transfer Y to Accumulator */
                     0x98 => {
                         self.TYA();
+                    }
+                    /* JSR (Jump to SubRoutine) */
+                    0x20 => {
+                        self.JSR();
                     }
                     _ => {
                         self.state = State::Exit;
@@ -1404,5 +1409,132 @@ impl CPU {
         if self.accumulator & 0b1000_0000 > 0 {
             self.status.set_negative();
         }
+    }
+}
+
+/**
+* Constrol Flow Instructions
+*  Branch Instructions
+   Affect Flags: none
+
+   All branches are relative mode and have a length of two bytes.
+   Syntax is "Bxx Displacement" or (better) "Bxx Label".
+   See the notes on the Program Counter for more on displacements.
+
+   Branches are dependant on the status of the flag bits when the op code is encountered.
+   A branch not taken requires two machine cycles.
+   Add one if the branch is taken and add one more if the branch crosses a page boundary.
+*/
+impl CPU {
+    /**
+    *  JSR (Jump to SubRoutine)
+       The JSR instruction pushes the address (minus one) of the return point on to the stack 
+       and then sets the program counter to the target memory address.
+
+       Processor Status after use:
+       
+       C	Carry Flag	Not affected
+       Z	Zero Flag	Not affected
+       I	Interrupt Disable	Not affected
+       D	Decimal Mode Flag	Not affected
+       B	Break Command	Not affected
+       V	Overflow Flag	Not affected
+       N	Negative Flag	Not affected
+
+       Affects Flags: none
+
+       MODE           SYNTAX       HEX LEN TIM
+       Absolute      JSR $5597     $20  3   6
+
+       JSR pushes the address-1 of the next operation on to
+       the stack before transferring program control to the following address.
+       Subroutines are normally terminated by a RTS op code.
+    */
+    fn JSR(&mut self) {
+        // Fetch PC for access OP Code and store at address
+        // Example :
+        //          PC = 0xD43D
+        //          Address = 0xD43D
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0xD43D + 0x0001
+        //          PC = 0xD43E
+        self.pc += 1;
+
+        // Fetch PC for write to stack Hi/Lo
+        // Example :
+        //          PC = 0xD43E
+        //          Address Register = 0xD43E
+        self.address_register = self.pc.clone();
+
+        // Push PC Hi byte (8-bit) to stack by stack pointer (SP)
+        // Example :
+        //          PC(Hi) = 0xD4
+        //          STCK_ADDR_HI = 0x01B7
+        let pch: u8 = (self.address_register >> 8 & 0x00FF) as u8;
+        let stck_addr_hi: u16 = (*START_STACK_POINTER + self.stack_pointer as u16 & 0x00FF).into();
+        self.write(&stck_addr_hi, pch);
+
+        // Push PC Lo byte (8-bit) to stack by stack pointer - 1 (SP)
+        // Eample :
+        //          PC(Lo) = 0x3E
+        //          STCK_ADDR_LO = 0x01B6
+        self.stack_pointer -= 1;
+        let pcl: u8 = (self.address_register & 0x00FF) as u8;
+        let stck_addr_lo: u16 = (*START_STACK_POINTER + self.stack_pointer as u16 & 0x00FF).into();
+        self.write(&stck_addr_lo, pcl);
+
+        // Clear address register
+        // Address Register = 0x0000
+        self.address_register = 0x0000;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0xD43D
+        //          Data = 0xFB
+        self.data = self.read_rom(&self.address);
+
+        // Add data to Lo byte of address register
+        // Example :
+        //          Address Register = 0x0000 + 0xFB
+        //                           = 0x00FB
+        self.address_register += self.data as u16 & 0x00FF;
+
+        // Store PC to address
+        // Example :
+        //          PC = 0xD43E
+        //          Address = 0xD43E
+        self.address = self.pc.clone();
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0xD43E
+        //          Data = 0xDA
+        self.data = self.read_rom(&self.address);
+
+        // Add data to Hi byte (8-bit) of address register
+        // Example :
+        //          Data  = 0xDA
+        //          Address Register = 0x00FB + 0xDA << 8
+        //                           = 0xDAFB
+        let data: u16 = (((self.data as u16) << 8) as u16 & 0xFF00).into();
+        self.address_register += data;
+
+        // Store back to PC
+        // Example :
+        //          PC = 0xD43E
+        //          Address Register = 0xDAFB
+        //          PC = 0xDAFB
+        self.pc = self.address_register;
+
+        // Update Cycles (6)
+        // Cycle = Cycle - 6
+        self.cycles -= 6;
+
+        // Switch state to 'Fetch'
+        self.state = State::Fetch;
     }
 }
