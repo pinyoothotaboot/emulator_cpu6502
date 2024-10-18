@@ -27,26 +27,26 @@ pub struct ProcessorStatus {
 impl ProcessorStatus {
     pub fn new() -> Self {
         ProcessorStatus {
-            N: 0x01,
-            V: 0x01,
+            N: 0x00,
+            V: 0x00,
             U: 0x01,
             B: 0x01,
-            D: 0x01,
-            I: 0x01,
-            Z: 0x01,
-            C: 0x01,
+            D: 0x00,
+            I: 0x00,
+            Z: 0x00,
+            C: 0x00,
         }
     }
 
     pub fn reset(&mut self) {
-        self.N = 0x01;
-        self.V = 0x01;
+        self.N = 0x00;
+        self.V = 0x00;
         self.U = 0x01;
         self.B = 0x01;
-        self.D = 0x01;
-        self.I = 0x01;
-        self.Z = 0x01;
-        self.C = 0x01;
+        self.D = 0x00;
+        self.I = 0x00;
+        self.Z = 0x00;
+        self.C = 0x00;
     }
 
     pub fn get_status(&self) -> u8 {

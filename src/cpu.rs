@@ -289,6 +289,9 @@ impl ICPU for CPU {
     }
 }
 
+/**
+ * Execute Instructions
+ */
 impl CPU {
     fn execute_instruction(&mut self) {
         match self.instruction_reg {
@@ -373,7 +376,15 @@ impl CPU {
                     /* JSR (Jump to SubRoutine) */
                     0x20 => {
                         self.JSR();
-                    }
+                    },
+                    /* JMP - Jump */
+                    0x4C | 0x6C => {
+                        self.JMP(&instruction.code);
+                    },
+                    /** CMP (CoMPare accumulator) */
+                    0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
+                        self.CMP(&instruction.code);
+                    },
                     _ => {
                         self.state = State::Exit;
                     }
@@ -732,20 +743,58 @@ impl CPU {
        + add 1 cycle if page boundary crossed
     */
     fn LDA(&mut self) {
+        // Store PC to Address
+        // Example :
+        //          PC = 0xDAFC
+        //          Address = 0xDAFC
+        self.address = self.pc.clone();
+
+        // Next PC = PC + 1
+        // Example :
+        //          PC = 0xDAFC + 0x0001
+        //             = 0xDAFD
+        self.pc += 1;
+
+        // Load data from Rom memory
+        // Example :
+        //          Address = 0xDAFC
+        //          Data = 0x0D
+        self.data = self.read_rom(&self.address);
+
         // Loads a byte of memory into the accumulator
         // A = data
+        // Example :
+        //          Data = 0x0D
+        //          Accumulator = 0x0D
         self.accumulator = self.data;
 
         // setting the zero and negative flags as appropriate.
         // Z	Zero Flag	Set if A = 0
+        // Example :
+        //          Accumlator = 0x0D  != 0
+        //          Z = 0
         if self.accumulator == 0x00 {
             self.status.set_zero();
+        } else {
+            self.status.unset_zero();
         }
 
         // N	Negative Flag	Set if bit 7 of A is set
+        // Example :
+        //          Accumulator = 0b0000_1101 &
+        //                        0b1000_0000
+        //                      = 0b0000_0000 = 0x00 < 1
+        //          N = 0
         if self.accumulator & 0b1000_0000 > 0 {
             self.status.set_negative();
+        } else {
+            self.status.unset_negative();
         }
+
+        // TODO :: Update Cycles
+
+        // Update state 'Fetch'
+        self.state = State::Fetch;
     }
 
     /**
@@ -1535,6 +1584,374 @@ impl CPU {
         self.cycles -= 6;
 
         // Switch state to 'Fetch'
+        self.state = State::Fetch;
+    }
+
+
+    /**
+     *  JMP - Jump
+        Sets the program counter to the address specified by the operand.
+
+        Processor Status after use:
+
+        C	Carry Flag	Not affected
+        Z	Zero Flag	Not affected
+        I	Interrupt Disable	Not affected
+        D	Decimal Mode Flag	Not affected
+        B	Break Command	Not affected
+        V	Overflow Flag	Not affected
+        N	Negative Flag	Not affected
+
+        Affects Flags: none
+
+        MODE           SYNTAX       HEX LEN TIM
+        Absolute      JMP $5597     $4C  3   3
+        Indirect      JMP ($5597)   $6C  3   5
+
+        JMP transfers program execution to the following address (absolute) or to the location contained in 
+        the following address (indirect). Note that there is no carry associated with the indirect jump so:
+        AN INDIRECT JUMP MUST NEVER USE A
+        VECTOR BEGINNING ON THE LAST BYTE
+        OF A PAGE
+        For example if address $3000 contains $40, $30FF contains $80, and $3100 contains $50, 
+        the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended i.e. 
+        the 6502 took the low byte of the address from $30FF and the high byte from $3000.
+     */
+    fn JMP(&mut self,code : &u8) {
+        match *code {
+            0x4C => {
+                self.JMP_ABS();
+            },
+            0x6C => {
+                self.JMP_IND();
+            },
+            _ => {
+                self.state = State::Fetch;
+            }
+        }
+    }
+
+    fn JMP_ABS(&mut self) {
+        // Fetch PC for access OP Code and store at address
+        // Example :
+        //          PC = 0x0001
+        //          Address = 0x0001
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0x0001 + 0x0001
+        //          PC = 0x0002
+        self.pc += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0x0001
+        //          Data = 0x3C
+        self.data = self.read_rom(&self.address);
+
+        // Clear address register
+        // Address Register = 0x0000
+        self.address_register = 0x0000;
+
+
+        // Add data to Lo byte of address register
+        // Example :
+        //          Address Register = 0x0000 + 0x3C
+        //                           = 0x003C
+        self.address_register = self.data as u16 & 0x00FF;
+
+        // Store PC to address
+        // Example :
+        //          PC = 0x0002
+        //          Address = 0x0002
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0x0002 + 0x0001
+        //          PC = 0x0003
+        self.pc += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0x0002
+        //          Data = 0xD4
+        self.data = self.read_rom(&self.address);
+
+        // Add data to Hi byte (8-bit) of address register
+        // Example :
+        //          Data  = 0xD4
+        //          Address Register = 0x003C + 0xD4 << 8
+        //                           = 0xD43C
+        let data: u16 = (((self.data as u16) << 8) as u16 & 0xFF00).into();
+        self.address_register += data;
+
+        // Store back to PC
+        // Example :
+        //          PC = 0x0003
+        //          Address Register = 0xD43C
+        //          PC = 0xD43C
+        self.pc = self.address_register;
+
+        // Update Cycles (3)
+        // Cycle = Cycle - 3
+        self.cycles -= 3;
+
+        // Switch state to 'Fetch'
+        self.state = State::Fetch;
+
+    }
+
+    fn JMP_IND(&mut self) {
+        // Fetch PC for access OP Code and store at address
+        // Example :
+        //          PC = 0xFDEE
+        //          Address = 0xFDEE
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0xFDEE + 0x0001
+        //          PC = 0xFDEF
+        self.pc += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0xFDEE
+        //          Data = 0x36
+        self.data = self.read_rom(&self.address);
+
+        // Clear address register
+        // Address Register = 0x0000
+        self.address_register = 0x0000;
+
+
+        // Add data to Lo byte of address register
+        // Example :
+        //          Address Register = 0x0000 + 0x36
+        //                           = 0x0036
+        self.address_register += self.data as u16 & 0x00FF;
+
+        // Store PC to address
+        // Example :
+        //          PC = 0xFDEF
+        //          Address = 0xFDEF
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0xFDEF + 0x0001
+        //          PC = 0xFDF0
+        self.pc += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0xFDEF
+        //          Data = 0x00
+        self.data = self.read_rom(&self.address);
+
+        // Add data to Hi byte (8-bit) of address register
+        // Example :
+        //          Data  = 0x00
+        //          Address Register = 0x0036 + 0x00 << 8
+        //                           = 0x0036
+        let data: u16 = (((self.data as u16) << 8) as u16 & 0xFF00).into();
+        self.address_register += data;
+
+        // Store data to address
+        // Example :
+        //          Data = 0x0036
+        //          Address = 0x0036
+        self.address = self.address_register.clone();
+        // Clear address register
+        // Address Register = 0x0000
+        self.address_register = 0x0000;
+
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0x0036
+        //          Data = 0xF0
+        self.data = self.read_rom(&self.address);
+
+        // Add data to Lo byte of address register
+        // Example :
+        //          Address Register = 0x0000 + 0xF0
+        //                           = 0x00F0
+        self.address_register += self.data as u16 & 0x00FF;
+
+
+        // Next address + 1
+        // Address = Address + 1
+        // Example :
+        //          Address = 0x0036 + 0x0001
+        //                  = 0x0037
+        self.address += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0x0037
+        //          Data = 0xFD
+        self.data = self.read_rom(&self.address);
+
+        // Add data to Hi byte (8-bit) of address register
+        // Example :
+        //          Data  = 0xFD
+        //          Address Register = 0x00F0 + 0xFD << 8
+        //                           = 0xFDF0
+        let data: u16 = (((self.data as u16) << 8) as u16 & 0xFF00).into();
+        self.address_register += data;
+
+        // Store back to PC
+        // Example :
+        //          PC = 0xFDF0
+        //          Address Register = 0xFDF0
+        //          PC = 0xFDF0
+        self.pc = self.address_register;
+        // Clear address register
+        // Address Register = 0x0000
+        self.address_register = 0x0000;
+
+        // Update Cycles (5)
+        // Cycle = Cycle - 5
+        self.cycles -= 5;
+
+        // Switch state to 'Fetch'
+        self.state = State::Fetch;
+    }
+}
+
+
+/**
+ * Arithmetrix & Logic Instructions 
+ */
+impl CPU {
+    /**
+     *  CMP - Compare
+        Z,C,N = A-M
+
+        This instruction compares the contents of the accumulator with 
+        another memory held value and sets the zero and carry flags as appropriate.
+
+        Processor Status after use:
+
+        C	Carry Flag	Set if A >= M
+        Z	Zero Flag	Set if A = M
+        I	Interrupt Disable	Not affected
+        D	Decimal Mode Flag	Not affected
+        B	Break Command	Not affected
+        V	Overflow Flag	Not affected
+        N	Negative Flag	Set if bit 7 of the result is set
+
+        Affects Flags: N Z C
+
+        MODE           SYNTAX       HEX LEN TIM
+        Immediate     CMP #$44      $C9  2   2
+        Zero Page     CMP $44       $C5  2   3
+        Zero Page,X   CMP $44,X     $D5  2   4
+        Absolute      CMP $4400     $CD  3   4
+        Absolute,X    CMP $4400,X   $DD  3   4+
+        Absolute,Y    CMP $4400,Y   $D9  3   4+
+        Indirect,X    CMP ($44,X)   $C1  2   6
+        Indirect,Y    CMP ($44),Y   $D1  2   5+
+
+        + add 1 cycle if page boundary crossed
+
+        Compare sets flags as if a subtraction had been carried out. 
+        If the value in the accumulator is equal or greater than the compared value, 
+        the Carry will be set. The equal (Z) and negative (N) flags will be set based on equality or 
+        lack thereof and the sign (i.e. A>=$80) of the accumulator.
+     */
+    fn CMP(&mut self,code : &u8) {
+        match *code {
+            0xC9 => {
+                self.CMP_IMM();
+            },
+            0xC5 => {},
+            0xD5 => {},
+            0xCD => {},
+            0xDD => {},
+            0xD9 => {},
+            0xC1 => {},
+            0xD1 => {},
+            _ => {}
+        }
+    }
+
+    fn CMP_IMM(&mut self) {
+        // Load PC to store add address
+        // Example :
+        //          PC = 0xDB5F
+        //          Address = 0xDB5F
+        self.address = self.pc.clone();
+
+        // Next PC 
+        // Example :
+        //          PC = 0xDB5F + 0x0001
+        //             = 0xDB60
+        self.pc += 1;
+
+        // Copy load accumulator to temp
+        // Example :
+        //          Accumulator = 0b1000_1000
+        //          temp = 0b11000_1000
+        let temp = self.accumulator.clone();
+
+        // Load data from Rom memory
+        // Example :
+        //          Address = 0xDB5F
+        //          Data  = 0xA0
+        self.data = self.read_rom(&self.address);
+
+        // A - Data
+        // Example :
+        //        diff = T - Data
+        //             = 0b11000_1000
+        //                          -
+        //               0b1010_0000
+        //             = 0b1110_1000
+        let diff = temp - self.data;
+
+        // sets the zero and carry flags as appropriate.
+        // C	Carry Flag	Set if A >= M
+        // Example :
+        //          Accumulator = 0b1000_1000
+        //          Data        = 0b1010_0000
+        //          Status      = 0b1011_0000
+        //          C = 0
+        if self.accumulator >= diff {
+            self.status.set_carry();
+        } else {
+            self.status.unset_carry();
+        }
+
+        // Z	Zero Flag	Set if A = M
+        // Example :
+        //           Z = 0
+        if self.accumulator == diff {
+            self.status.set_zero();
+        } else {
+            self.status.unset_zero();
+        }
+
+        // N	Negative Flag	Set if bit 7 of the result is set
+        // Example :
+        //          N = 1
+        if diff & 0b1000_0000 > 0 {
+            self.status.set_negative();
+        } else {
+            self.status.unset_negative();
+        }
+
+        // Update Cycle = Cycle - 2
+        self.cycles -= 2;
+
+        // Update state 'Fetch'
         self.state = State::Fetch;
     }
 }
