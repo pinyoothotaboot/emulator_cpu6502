@@ -1,3 +1,38 @@
+//                                            __________________
+//                                            PPU               |
+//                                            __________________|
+//    NV-B DIZC                               ALU               |      ______
+//    ___________                                               |     |      |
+//   |_0011_0000_|--|                                           |-----| 03   | X Reg.
+//     P Stastus    |    __________________                     |     |______|
+//                  |    ___________________                    |
+//                  |---|___________________|-------------------|       ______
+//                  |   |___| Accumulator                       |      |      |
+//                  |                                           |------| D8   | Y Reg.
+//                  |                                           |      |______|
+//                  |___________________________________________|
+//                                                              |
+//         _________                                            |
+//     PC |__0804___|                                           |     _____________
+//             |              Address Register                  |----| LDA $$,X    |
+//             |                 ________                       |    |_____________|
+//             |----------------|________|----------------------|      Decoder
+//             |                                                |
+//             |             _____________________              |       ____________
+//             |            |                     |             |      |            |
+//             |            |     0801 :    03    |             |______| 01B9 : FF  |
+//         ____|____        |     0802 :    BD    |          ___|__    | 01B8 : FF  |
+//        |__0803___|-------|     0803 :    00    |---------|__00__|   | 01B7 : FF  |
+//          Address         |     0804 :    08    |           Data     | 01B6 : FF  |
+//                          |     0805 :    8D    |                    |____________|
+//                          |     0806 :    00    |                       Mem Stack
+//                          |     0807 :    10    |       Fetch
+//                          |     0808 :    CA    |      _________ 
+//                          |                     |     |_Execute_|
+//                          |                     |
+//                          |_____________________|
+//                                   Memory
+//                           
 use std::time::{Duration, SystemTime};
 
 use crate::constants::START_STACK_POINTER;
@@ -339,7 +374,7 @@ impl CPU {
                     }
                     /* STA - Store Accumulator */
                     0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
-                        self.STA();
+                        self.STA(&instruction.code);
                     }
                     /* STX - Store X Register */
                     0x86 | 0x96 | 0x8E => {
@@ -995,18 +1030,33 @@ impl CPU {
     */
     fn DEX(&mut self) {
         // Subtracts one from the X register
+        // Example :
+        //          X_Reg = 0x03
+        //                = 0x03 - 0x01
+        //                = 0x02
         self.x_reg -= 1;
 
         // setting the zero and negative flags as appropriate.
         // Z	Zero Flag	Set if X is zero
         if self.x_reg == 0x00 {
             self.status.set_zero();
+        } else {
+            self.status.unset_zero();
         }
 
         // N	Negative Flag	Set if bit 7 of X is set
         if self.x_reg & 0b1000_0000 > 0 {
             self.status.set_negative();
+        } else {
+            self.status.unset_negative();
         }
+
+        // Update Cycles (2)
+        // Cycle = Cycle - 2
+        self.cycles -= 2;
+
+        // Switch state to 'Fetch'
+        self.state = State::Fetch;
     }
 
     /**
@@ -1186,12 +1236,102 @@ impl CPU {
        Indirect,X    STA ($44,X)   $81  2   6
        Indirect,Y    STA ($44),Y   $91  2   6
     */
-    fn STA(&mut self) {
+    fn STA(&mut self,code : &u8) {
         // Stores the contents of the accumulator into memory.
         // A -> M
-        let data: u8 = self.accumulator;
-        let address = self.address.clone();
-        self.write(&address, data);
+        //let data: u8 = self.accumulator;
+        //let address = self.address.clone();
+        //self.write(&address, data);
+        match *code {
+            0x8D =>{
+                self.STA_ABS();
+            },
+            _ => {
+                self.state = State::Fetch;
+            }
+        }
+    }
+
+    fn STA_ABS(&mut self) {
+        // Fetch PC for access OP Code and store at address
+        // Example :
+        //          PC = 0x0806
+        //          Address = 0x0806
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0x0806 + 0x0001
+        //          PC = 0x0807
+        self.pc += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0x0806
+        //          Data = 0x00
+        self.data = self.read_rom(&self.address);
+
+        // Clear address register
+        // Address Register = 0x0000
+        self.address_register = 0x0000;
+
+        // Add data to Lo byte of address register (LOW Byte)
+        // Example :
+        //          Address Register = 0x0000 + 0x00
+        //                           = 0x0000
+        self.address_register = self.data as u16 & 0x00FF;
+
+        // Fetch PC for access OP Code and store at address
+        // Example :
+        //          PC = 0x0807
+        //          Address = 0x0807
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0x0807 + 0x0001
+        //          PC = 0x0808
+        self.pc += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0x0807
+        //          Data = 0x10
+        self.data = self.read_rom(&self.address);
+
+        // Add data to Hi byte (8-bit) of address register (HI BYTE)
+        // Example :
+        //          Data  = 0x10
+        //          Address Register = 0x0000 + 0x10 << 8
+        //                           = 0x1000
+        let data: u16 = (((self.data as u16) << 8) as u16 & 0xFF00).into();
+        self.address_register += data;
+
+        // Store data to address
+        // Example :
+        //          Data = 0x1000
+        //          Address = 0x1000
+        self.address = self.address_register.clone();
+
+        // Clear address register
+        // Address Register = 0x0000
+        self.address_register = 0x0000;
+
+
+        // Load accumulator to data
+        // Example :
+        //          Accumulator = 0x00
+        //          Data  = 0x00
+        self.data = self.accumulator.clone();
+
+        // Update Cycles (4)
+        // Cycle = Cycle - 4
+        self.cycles -= 4;
+
+        // Switch state to 'Fetch'
+        self.state = State::Fetch;
     }
 
     /**
@@ -1462,7 +1602,7 @@ impl CPU {
 }
 
 /**
-* Constrol Flow Instructions
+* Control Flow Instructions
 *  Branch Instructions
    Affect Flags: none
 
@@ -1586,7 +1726,6 @@ impl CPU {
         // Switch state to 'Fetch'
         self.state = State::Fetch;
     }
-
 
     /**
      *  JMP - Jump
@@ -1823,6 +1962,57 @@ impl CPU {
 
         // Switch state to 'Fetch'
         self.state = State::Fetch;
+    }
+
+    /**
+     *  BNE - Branch if Not Equal
+        If the zero flag is clear then add the relative displacement 
+        to the program counter to cause a branch to a new location.
+
+        Processor Status after use:
+
+        C	Carry Flag	Not affected
+        Z	Zero Flag	Not affected
+        I	Interrupt Disable	Not affected
+        D	Decimal Mode Flag	Not affected
+        B	Break Command	Not affected
+        V	Overflow Flag	Not affected
+        N	Negative Flag	Not affected
+
+        MODE           SYNTAX       HEX LEN TIM
+        Relative       BNE $D0      $D0  1   2
+     */
+    fn BNE(&mut self) {
+        // Fetch PC for access OP Code and store at address
+        // Example :
+        //          PC = 0x080A
+        //          Address = 0x080A
+        self.address = self.pc.clone();
+
+        // Next PC
+        // PC = PC + 1
+        // Example :
+        //          PC = 0x080A + 0x0001
+        //          PC = 0x080B
+        self.pc += 1;
+
+        // Read Rom memory by address
+        // Example :
+        //          Address = 0x080A
+        //          Data = 0xF5
+        self.data = self.read_rom(&self.address);
+
+        // Load PC to Address Register
+        // Example :
+        //          PC = 0x080B
+        //          Address Register = 0x080B
+        self.address_register = self.pc.clone();
+
+        // 0000_1000_0000_1011 -> 0x080B => 2059
+        // 0000_0000_1111_0101 -> 0x00F5 => 245 + 11 = 256
+        // 0000_1000_0000_0000 -> 0x0800 => 2048
+        // TODO :: Wait implement 
+
     }
 }
 
