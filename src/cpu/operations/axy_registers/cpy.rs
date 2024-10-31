@@ -84,7 +84,7 @@ impl CPU {
         let adh = self.data; // Hi-Byte
 
         // Fetch Data
-        self.address_register = (adh << 8) as u16 & 0xFF00 + (adl as u16) & 0x00FF;
+        self.address_register = ((adh as u16) << 8) & 0xFF00 + (adl as u16) & 0x00FF;
         self.address = self.address_register;
         self.data = self.read(&self.address);
 

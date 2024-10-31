@@ -110,6 +110,10 @@ impl CPU {
                     0x88 => {
                         self.dey();
                     }
+                    /* INC - Increment Memory By One */
+                    0xE6 | 0xF6 | 0xEE | 0xFE => {
+                        self.inc(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
@@ -119,5 +123,15 @@ impl CPU {
                 panic!("Not found instruction");
             }
         }
+    }
+}
+
+/** Calculate */
+impl CPU {
+    pub fn page_cross(&mut self, old_addr: u16, new_addr: u16) -> bool {
+        if old_addr != new_addr {
+            return true;
+        }
+        return false;
     }
 }
