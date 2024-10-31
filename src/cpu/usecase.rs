@@ -130,6 +130,10 @@ impl CPU {
                     0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
                         self.ldx(&instruction.code);
                     }
+                    /* LDY - Load Index Register Y From Memory */
+                    0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
+                        self.ldy(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
