@@ -106,6 +106,10 @@ impl CPU {
                     0xCA => {
                         self.dex();
                     }
+                    /* DEY Decrement Y Register */
+                    0x88 => {
+                        self.dey();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
