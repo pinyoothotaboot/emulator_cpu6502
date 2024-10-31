@@ -102,6 +102,10 @@ impl CPU {
                     0xC0 | 0xC4 | 0xCC => {
                         self.cpy(&instruction.code);
                     }
+                    /* DEX Decrement X Register */
+                    0xCA => {
+                        self.dex();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
