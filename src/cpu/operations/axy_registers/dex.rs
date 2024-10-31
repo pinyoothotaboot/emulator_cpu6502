@@ -20,11 +20,11 @@ impl CPU {
       Negative flag	Updated to the value of bit #7 of the result.
     */
     pub fn dex(&mut self) {
-        self.dex_execute();
+        self.dex_implied();
         self.dex_run();
     }
 
-    fn dex_execute(&mut self) {
+    fn dex_implied(&mut self) {
         // PC = PC + 1
         self.pc += 1;
     }

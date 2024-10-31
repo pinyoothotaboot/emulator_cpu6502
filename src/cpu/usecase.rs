@@ -114,6 +114,10 @@ impl CPU {
                     0xE6 | 0xF6 | 0xEE | 0xFE => {
                         self.inc(&instruction.code);
                     }
+                    /* INX - Increment Index Register X By One */
+                    0xE8 => {
+                        self.inx();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }

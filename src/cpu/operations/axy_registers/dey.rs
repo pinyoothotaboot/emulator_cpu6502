@@ -23,11 +23,11 @@ impl CPU {
       Negative flag	Updated to the value of bit #7 of the result.
     */
     pub fn dey(&mut self) {
-        self.dey_execute();
+        self.dey_implied();
         self.dey_run();
     }
 
-    fn dey_execute(&mut self) {
+    fn dey_implied(&mut self) {
         // PC = PC + 1
         self.pc += 1;
     }
