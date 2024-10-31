@@ -1,0 +1,111 @@
+use crate::bus::model::Bus;
+use crate::cpu::instruction::CPU_6502_OPERATION_CODES_MAP;
+use crate::cpu::model::{State, CPU};
+use crate::cpu::processor_status::ProcessorStatus;
+use crate::interfaces::bus::IBus;
+use crate::interfaces::cpu::ICPU;
+
+impl CPU {
+    pub fn new() -> Self {
+        CPU {
+            pc: 0x0000,
+            address: 0x0000,
+            data: 0x00,
+            x_register: 0x00,
+            y_register: 0x00,
+            accumulator: 0x00,
+            instruction_reg: None,
+            status: ProcessorStatus::new(),
+            address_register: 0x0000,
+            cycles: 0x0000,
+            state: State::Fetch,
+            bus: Bus::new(),
+        }
+    }
+
+    fn fetch(&mut self) {
+        // Load 16-bit from program counter (PC) and set to address
+        // PC -> Address
+        // Example :
+        //           PC = 0x0000
+        //           Address = 0x0000
+        self.address = self.pc.clone();
+
+        // Load data from cpu6502 instruction memory 8-bit.And store data
+        // Instrunction Memory 8-bit -> Data
+        // Example :
+        //           Memory = 0x0000 : 4C
+        //           Data   = 0x4C
+        self.data = self.read(&self.address);
+    }
+
+    fn decode(&mut self) {
+        // Fetch OP CODE
+        self.instruction_reg = CPU_6502_OPERATION_CODES_MAP.get(&self.data).copied();
+    }
+}
+
+/** R/W Memory */
+impl CPU {
+    pub fn read(&self, address: &u16) -> u8 {
+        return self.bus.read(address);
+    }
+
+    pub fn write(&mut self, address: &u16, data: u8) {
+        self.bus.write(address, data);
+    }
+}
+
+impl ICPU for CPU {
+    fn reset(&mut self) {}
+
+    fn run(&mut self) {
+        loop {
+            // Process Instruction With State
+            match self.state {
+                State::Fetch => {
+                    // State fetch
+                    self.fetch();
+                    self.state = State::Decode;
+                }
+                State::Decode => {
+                    // State Decode
+                    self.decode();
+                    self.state = State::Execute;
+                }
+                State::Execute => {
+                    // State Execute
+                    self.execute();
+                    self.state = State::Fetch;
+                }
+                State::Exit => {
+                    break;
+                }
+                _ => {
+                    panic!("Program has problem!.");
+                }
+            }
+        }
+    }
+}
+
+impl CPU {
+    fn execute(&mut self) {
+        match self.instruction_reg {
+            Some(instruction) => {
+                match instruction.code {
+                    /* CPX Compare X Register */
+                    0xE0 | 0xE4 | 0xEC => {
+                        self.cpx(&instruction.code);
+                    }
+                    _ => {
+                        self.state = State::Fetch;
+                    }
+                }
+            }
+            None => {
+                panic!("Not found instruction");
+            }
+        }
+    }
+}
