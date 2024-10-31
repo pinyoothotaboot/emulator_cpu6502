@@ -122,6 +122,10 @@ impl CPU {
                     0xC8 => {
                         self.iny();
                     }
+                    /* LDA - Load Accumulator with Memory */
+                    0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
+                        self.lda(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }

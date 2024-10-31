@@ -5,3 +5,4 @@ pub mod dey;
 pub mod inc;
 pub mod inx;
 pub mod iny;
+pub mod lda;
