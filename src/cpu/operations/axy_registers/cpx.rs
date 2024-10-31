@@ -19,7 +19,7 @@ impl CPU {
 
        Addressing Mode	Assembly Language Form	Opcode	No. Bytes	No. Cycles
        Immediate	        CPX #$nn	          $E0	    2	        2
-       Absolute	        CPX $nnnn	          $EC	    3	        4
+       Absolute	            CPX $nnnn	          $EC	    3	        4
        Zero Page	        CPX $nn	              $E4	    2	        3
 
        Processor Status register changes
