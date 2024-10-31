@@ -3,3 +3,4 @@ pub mod cpy;
 pub mod dex;
 pub mod dey;
 pub mod inc;
+pub mod inx;
