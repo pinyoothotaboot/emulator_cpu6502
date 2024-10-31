@@ -118,6 +118,10 @@ impl CPU {
                     0xE8 => {
                         self.inx();
                     }
+                    /* INY - Increment Index Register Y By One */
+                    0xC8 => {
+                        self.iny();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
