@@ -98,6 +98,10 @@ impl CPU {
                     0xE0 | 0xE4 | 0xEC => {
                         self.cpx(&instruction.code);
                     }
+                    /* CPY Compare Y Register */
+                    0xC0 | 0xC4 | 0xCC => {
+                        self.cpy(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
