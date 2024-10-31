@@ -131,7 +131,7 @@ impl CPU {
         let bah = self.data;
 
         let current_addr = ((bah as u16) << 8) & 0xFF00 + (bal as u16) & 0x00FF;
-        let x_addr = (self.x_register & 0x00FF) as u16;
+        let x_addr = (self.x_register.clone() & 0x00FF) as u16;
 
         self.address_register = current_addr + x_addr;
         self.address = self.address_register;
