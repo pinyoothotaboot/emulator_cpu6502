@@ -142,6 +142,10 @@ impl CPU {
                     0x86 | 0x96 | 0x8E => {
                         self.stx(&instruction.code);
                     }
+                    /* STY - Store Index Register Y In Memory */
+                    0x84 | 0x94 | 0x8C => {
+                        self.sty(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
