@@ -150,6 +150,10 @@ impl CPU {
                     0xAA => {
                         self.tax();
                     }
+                    /* TAY - Transfer Accumula Tor To Index Y */
+                    0xA8 => {
+                        self.tay();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
