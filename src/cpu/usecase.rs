@@ -159,6 +159,10 @@ impl CPU {
                     0xBA => {
                         self.tsx();
                     }
+                    /* TXA - Transfer Index X To Accumulator */
+                    0x8A => {
+                        self.txa();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
