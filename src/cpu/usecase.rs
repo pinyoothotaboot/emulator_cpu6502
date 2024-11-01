@@ -20,6 +20,7 @@ impl CPU {
             cycles: 0x0000,
             state: State::Fetch,
             bus: Bus::new(),
+            sp : 0x00
         }
     }
 
@@ -153,6 +154,10 @@ impl CPU {
                     /* TAY - Transfer Accumula Tor To Index Y */
                     0xA8 => {
                         self.tay();
+                    }
+                    /* TSX - Transfer Stack Pointer To Index X */
+                    0xBA => {
+                        self.tsx();
                     }
                     _ => {
                         self.state = State::Fetch;
