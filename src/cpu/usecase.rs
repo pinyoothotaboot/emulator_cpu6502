@@ -146,6 +146,10 @@ impl CPU {
                     0x84 | 0x94 | 0x8C => {
                         self.sty(&instruction.code);
                     }
+                    /* TAX - Transfer Accumulator To Index X */
+                    0xAA => {
+                        self.tax();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
