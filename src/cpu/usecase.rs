@@ -163,6 +163,10 @@ impl CPU {
                     0x8A => {
                         self.txa();
                     }
+                    /* TXS - Transfer Index X To Stack Pointer */
+                    0x9A => {
+                        self.txs();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
