@@ -138,6 +138,10 @@ impl CPU {
                     0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
                         self.sta(&instruction.code);
                     }
+                    /* STX - Store Index Register X In Memory */
+                    0x86 | 0x96 | 0x8E => {
+                        self.stx(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
