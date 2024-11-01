@@ -84,4 +84,6 @@ pub struct CPU {
     pub cycles: u16,
     pub state: State,
     pub bus: Bus,
+    /* Stack Pointer */
+    pub sp : u8
 }
