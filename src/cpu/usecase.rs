@@ -171,6 +171,10 @@ impl CPU {
                     0x98 => {
                         self.tya();
                     }
+                    /* CLC - Clear Carry Flag */
+                    0x18 => {
+                        self.clc();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
