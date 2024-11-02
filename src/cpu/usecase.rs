@@ -199,6 +199,10 @@ impl CPU {
                     0x78 => {
                         self.sei();
                     }
+                    /* PHA - Push Accumulator On Stack */
+                    0x48 => {
+                        self.pha();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
