@@ -203,6 +203,10 @@ impl CPU {
                     0x48 => {
                         self.pha();
                     }
+                    /* PHP - Push Processor Status On Stack */
+                    0x08 => {
+                        self.php();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }

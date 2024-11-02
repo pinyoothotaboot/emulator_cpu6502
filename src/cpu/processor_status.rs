@@ -84,6 +84,10 @@ impl ProcessorStatus {
         self.U = 0x01;
     }
 
+    pub fn get_unused(&self) -> u8 {
+        return self.U.clone();
+    }
+
     pub fn unset_unused(&mut self) {
         self.U = 0x00;
     }
@@ -94,6 +98,10 @@ impl ProcessorStatus {
 
     pub fn unset_break_command(&mut self) {
         self.B = 0x00;
+    }
+
+    pub fn get_break_command(&self) -> u8 {
+        return self.B.clone();
     }
 
     pub fn set_decimal_mode(&mut self) {
