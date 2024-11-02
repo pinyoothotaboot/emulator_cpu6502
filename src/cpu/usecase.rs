@@ -179,6 +179,10 @@ impl CPU {
                     0xD8 => {
                         self.cld();
                     }
+                    /* CLI - Clear Interrupt Disable */
+                    0x58 => {
+                        self.cli();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
