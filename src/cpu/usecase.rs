@@ -191,6 +191,10 @@ impl CPU {
                     0x38 => {
                         self.sec();
                     }
+                    /* SED - Set Decimal Mode */
+                    0xF8 => {
+                        self.sed();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
