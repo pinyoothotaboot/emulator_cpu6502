@@ -195,6 +195,10 @@ impl CPU {
                     0xF8 => {
                         self.sed();
                     }
+                    /* SEI - Set Interrupt Disable */
+                    0x78 => {
+                        self.sei();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
