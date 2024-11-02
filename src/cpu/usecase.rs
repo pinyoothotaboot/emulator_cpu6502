@@ -207,6 +207,10 @@ impl CPU {
                     0x08 => {
                         self.php();
                     }
+                    /* PLA - Pull Accumulator From Stack */
+                    0x68 => {
+                        self.pla();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
