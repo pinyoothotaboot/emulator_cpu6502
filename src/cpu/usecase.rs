@@ -183,6 +183,10 @@ impl CPU {
                     0x58 => {
                         self.cli();
                     }
+                    /* CLV - Clear Overflow Flag */
+                    0xB8 => {
+                        self.clv();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
