@@ -211,6 +211,10 @@ impl CPU {
                     0x68 => {
                         self.pla();
                     }
+                    /* PLP - Pull Processor Status From Stack */
+                    0x28 => {
+                        self.plp();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
