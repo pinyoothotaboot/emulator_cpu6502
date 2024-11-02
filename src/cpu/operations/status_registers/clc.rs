@@ -22,6 +22,6 @@ impl CPU {
     }
 
     fn clc_run(&mut self) {
-        self.status.set_carry();
+        self.status.unset_carry();
     }
 }

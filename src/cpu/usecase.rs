@@ -175,6 +175,10 @@ impl CPU {
                     0x18 => {
                         self.clc();
                     }
+                    /* CLD - Clear Decimal Mode */
+                    0xD8 => {
+                        self.cld();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
