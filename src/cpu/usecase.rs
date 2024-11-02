@@ -187,6 +187,10 @@ impl CPU {
                     0xB8 => {
                         self.clv();
                     }
+                    /* SEC - Set Carry Flag */
+                    0x38 => {
+                        self.sec();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
