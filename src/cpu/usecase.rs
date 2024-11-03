@@ -231,6 +231,10 @@ impl CPU {
                     0x30 => {
                         self.bmi();
                     }
+                    /* BNE - Branch on Result Not Zero */
+                    0xD0 => {
+                        self.bne();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
