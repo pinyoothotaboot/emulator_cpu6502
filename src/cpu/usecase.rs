@@ -235,6 +235,10 @@ impl CPU {
                     0xD0 => {
                         self.bne();
                     }
+                    /* BPL - Branch on Result Plus */
+                    0x10 => {
+                        self.bpl();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
