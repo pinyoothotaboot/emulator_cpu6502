@@ -239,6 +239,10 @@ impl CPU {
                     0x10 => {
                         self.bpl();
                     }
+                    /* BVC - Branch on Overflow Clear */
+                    0x50 => {
+                        self.bvc();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
