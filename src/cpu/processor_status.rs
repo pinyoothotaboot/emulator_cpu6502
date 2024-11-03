@@ -136,6 +136,10 @@ impl ProcessorStatus {
         self.C = 0x00;
     }
 
+    pub fn get_carry(&self) -> u8 {
+        return self.C.clone()
+    }
+
     pub fn set_negative(&mut self) {
         self.N = 0x01;
     }
