@@ -30,7 +30,7 @@ impl CPU {
         if self.status.get_carry() == 0 {
             let offset = self.data;
             // TODO :: Tick
-            self.address_register = self.pc as u16 & 0x00FF + offset as u16 & 0x00FF + 0x0001;
+            self.address_register = self.pc + offset as u16 & 0x00FF + 0x0001;
             self.address = self.address_register;
 
             if self.address & 0xFF00 != self.pc & 0xFF00 {

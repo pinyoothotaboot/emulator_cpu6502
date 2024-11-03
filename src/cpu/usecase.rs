@@ -223,6 +223,10 @@ impl CPU {
                     0xB0 => {
                         self.bcs();
                     }
+                    /* BEQ - Branch on Result Zero */
+                    0xF0 => {
+                        self.beq();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
