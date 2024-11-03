@@ -46,7 +46,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let adh = self.data;
 
-        self.address_register = ((adh as u16) << 8 ) & 0xFF00 + adl as u16 & 0x00FF;
+        self.address_register = ((adh as u16) << 8 ) & 0xFF00 | adl as u16 & 0x00FF;
     }
 
     fn jmp_jmp_absolute_indirect(&mut self) {
@@ -66,7 +66,7 @@ impl CPU {
 
         // Fetch low order byte of Jump Address
         // ADL
-        self.address_register = ((idh as u16) << 8 ) & 0xFF00 + idl as u16 & 0x00FF;
+        self.address_register = ((idh as u16) << 8 ) & 0xFF00 | idl as u16 & 0x00FF;
         self.address = self.address_register;
         self.data = self.read(&self.address);
         let adl = self.data;
@@ -77,7 +77,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let adh = self.data;
 
-        self.address_register = ((adh as u16) << 8 ) & 0xFF00 + adl as u16 & 0x00FF;
+        self.address_register = ((adh as u16) << 8 ) & 0xFF00 | adl as u16 & 0x00FF;
     }
 
     fn jmp_run(&mut self) {

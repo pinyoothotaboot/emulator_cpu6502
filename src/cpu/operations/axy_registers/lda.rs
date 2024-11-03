@@ -104,7 +104,7 @@ impl CPU {
         // Fetch Data and store ADL
         self.data = self.read(&self.address);
         let adl = self.data;
-        self.address_register = 0x0000 + adl as u16 & 0x00FF;
+        self.address_register = 0x0000 | adl as u16 & 0x00FF;
         self.address = self.address_register;
         // Fetch Data
         self.data = self.read(&self.address);
@@ -144,7 +144,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let adh = self.data;
 
-        self.address_register = ((adh as u16) << 8) & 0xFF00 + adl as u16 & 0x00FF;
+        self.address_register = ((adh as u16) << 8) & 0xFF00 | adl as u16 & 0x00FF;
         self.address = self.address_register;
         // Fetch Data
         self.data = self.read(&self.address);
@@ -170,7 +170,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let bah = self.data;
 
-        let current_addr = ((bah as u16) << 8) & 0xFF00 + bal as u16 & 0x00FF;
+        let current_addr = ((bah as u16) << 8) & 0xFF00 | bal as u16 & 0x00FF;
         let new_addr = self.x_register.clone() as u16 & 0x00FF;
         self.address_register = current_addr + new_addr;
         self.address = self.address_register;
@@ -201,7 +201,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let bah = self.data;
 
-        let current_addr = ((bah as u16) << 8) & 0xFF00 + bal as u16 & 0x00FF;
+        let current_addr = ((bah as u16) << 8) & 0xFF00 | bal as u16 & 0x00FF;
         let new_addr = self.y_register.clone() as u16 & 0x00FF;
         self.address_register = current_addr + new_addr;
         self.address = self.address_register;
@@ -236,7 +236,7 @@ impl CPU {
         let adh = self.data;
 
         // Fetch Data
-        self.address_register = ((adh as u16) << 8) & 0xFF00 + (adl as u16) & 0x00FF;
+        self.address_register = ((adh as u16) << 8) & 0xFF00 | (adl as u16) & 0x00FF;
         self.address = self.address_register;
         self.data = self.read(&self.address);
 
@@ -266,7 +266,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let bah = self.data;
 
-        let current_addr = ((bah as u16) << 8) & 0xFF00 + bal as u16 & 0x00FF;
+        let current_addr = ((bah as u16) << 8) & 0xFF00 | bal as u16 & 0x00FF;
         let new_addr = self.y_register.clone() as u16 & 0x00FF;
 
         // Fetch Data

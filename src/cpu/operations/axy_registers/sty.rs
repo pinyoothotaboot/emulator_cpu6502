@@ -47,7 +47,7 @@ impl CPU {
         // Fetch Effective Address
         self.data = self.read(&self.address);
         let adl = self.data;
-        self.address_register = 0x0000 + adl as u16 & 0x00FF;
+        self.address_register = 0x0000 | adl as u16 & 0x00FF;
         self.address = self.address_register;
         // Fetch Data
         self.data = self.read(&self.address);
@@ -88,7 +88,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let adh = self.data;
 
-        self.address_register = ((adh as u16) << 8) & 0xFF00 + adl as u16 & 0x00FF;
+        self.address_register = ((adh as u16) << 8) & 0xFF00 | adl as u16 & 0x00FF;
         self.address = self.address_register;
         // Fetch Data
         self.data = self.read(&self.address);

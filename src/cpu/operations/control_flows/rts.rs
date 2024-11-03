@@ -20,14 +20,14 @@ impl CPU {
         // Pull PCL from Stack
         // PCL
         self.sp +=1;
-        let addr_stck = 0x0100 + self.sp as u16 & 0x00FF;
+        let addr_stck = 0x0100 | self.sp as u16 & 0x00FF;
         self.data = self.read(&addr_stck);
         let pcl = self.data as u16 & 0x00FF;
 
         // Pull PCH from Stack
         // PCH
         self.sp +=1;
-        let addr_stck = 0x0100 + self.sp as u16 & 0x00FF;
+        let addr_stck = 0x0100 | self.sp as u16 & 0x00FF;
         self.data = self.read(&addr_stck);
         let pch = self.data as u16 & 0x00FF;
 
