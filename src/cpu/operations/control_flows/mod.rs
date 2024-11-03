@@ -5,3 +5,4 @@ pub mod bmi;
 pub mod bne;
 pub mod bpl;
 pub mod bvc;
+pub mod jmp;

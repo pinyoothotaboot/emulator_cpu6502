@@ -243,6 +243,10 @@ impl CPU {
                     0x50 => {
                         self.bvc();
                     }
+                    /* JMP - JMP Indirect */
+                    0x4C | 0x6C => {
+                        self.jmp(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
