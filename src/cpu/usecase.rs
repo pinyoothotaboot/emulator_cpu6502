@@ -219,6 +219,10 @@ impl CPU {
                     0x90 => {
                         self.bcc();
                     }
+                    /* BCS - Branch on Carry Set */
+                    0xB0 => {
+                        self.bcs();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
