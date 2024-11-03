@@ -227,6 +227,10 @@ impl CPU {
                     0xF0 => {
                         self.beq();
                     }
+                    /* BMI - Branch on Result Minus */
+                    0x30 => {
+                        self.bmi();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }

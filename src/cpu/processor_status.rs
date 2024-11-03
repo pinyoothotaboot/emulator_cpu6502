@@ -151,4 +151,8 @@ impl ProcessorStatus {
     pub fn unset_negative(&mut self) {
         self.N = 0x00;
     }
+
+    pub fn get_negative(&self) ->u8 {
+        return self.N.clone();
+    }
 }
