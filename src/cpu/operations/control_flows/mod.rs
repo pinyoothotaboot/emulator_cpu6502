@@ -6,3 +6,4 @@ pub mod bne;
 pub mod bpl;
 pub mod bvc;
 pub mod jmp;
+pub mod jsr;

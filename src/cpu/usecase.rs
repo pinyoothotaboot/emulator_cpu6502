@@ -247,6 +247,10 @@ impl CPU {
                     0x4C | 0x6C => {
                         self.jmp(&instruction.code);
                     }
+                    /* JSR - Jump To Subroutine */
+                    0x20 => {
+                        self.jsr();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
