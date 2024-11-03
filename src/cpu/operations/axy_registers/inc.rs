@@ -62,7 +62,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let adl = self.data;
 
-        self.address_register = 0x0000 + (adl & 0x00FF) as u16;
+        self.address_register = 0x0000 | (adl & 0x00FF) as u16;
         self.address = self.address_register;
 
         // Fetch Data
@@ -105,7 +105,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let adh = self.data;
 
-        self.address_register = ((adh as u16) << 8) & 0xFF00 + (adl as u16) & 0x00FF;
+        self.address_register = ((adh as u16) << 8) & 0xFF00 | (adl as u16) & 0x00FF;
         self.address = self.address_register;
 
         // Fetch Data
@@ -130,7 +130,7 @@ impl CPU {
         self.data = self.read(&self.address);
         let bah = self.data;
 
-        let current_addr = ((bah as u16) << 8) & 0xFF00 + (bal as u16) & 0x00FF;
+        let current_addr = ((bah as u16) << 8) & 0xFF00 | (bal as u16) & 0x00FF;
         let x_addr = (self.x_register.clone() & 0x00FF) as u16;
 
         self.address_register = current_addr + x_addr;

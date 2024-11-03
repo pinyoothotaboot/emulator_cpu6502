@@ -49,7 +49,7 @@ impl CPU {
         let adh = self.data;
 
         // Next Instruction
-        self.address_register = ((adh as u16 ) << 8) & 0xFF00 + adl as u16 & 0x00FF;
+        self.address_register = ((adh as u16 ) << 8) & 0xFF00 | adl as u16 & 0x00FF;
         self.pc = self.address_register;
     }
 }
