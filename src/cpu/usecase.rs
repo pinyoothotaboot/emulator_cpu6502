@@ -251,6 +251,10 @@ impl CPU {
                     0x20 => {
                         self.jsr();
                     }
+                    /* RTS - Return From Subroutine */
+                    0x60 => {
+                        self.rts();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
