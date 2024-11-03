@@ -80,6 +80,10 @@ impl ProcessorStatus {
         self.V = 0x00;
     }
 
+    pub fn get_overflow(&self) ->u8 {
+        return self.V.clone();
+    }
+
     pub fn set_unused(&mut self) {
         self.U = 0x01;
     }
