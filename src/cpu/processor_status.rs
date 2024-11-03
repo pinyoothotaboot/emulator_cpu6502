@@ -128,6 +128,10 @@ impl ProcessorStatus {
         self.Z = 0x00;
     }
 
+    pub fn get_zero(&self) -> u8 {
+        return self.Z.clone();
+    }
+
     pub fn set_carry(&mut self) {
         self.C = 0x01;
     }
