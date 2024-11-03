@@ -215,6 +215,10 @@ impl CPU {
                     0x28 => {
                         self.plp();
                     }
+                    /* BCC - Branch on Carry Clear */
+                    0x90 => {
+                        self.bcc();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
