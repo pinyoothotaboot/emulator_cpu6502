@@ -283,6 +283,10 @@ impl CPU {
                     0xC9 | 0xCD | 0xDD | 0xD9 | 0xC5 | 0xD5 | 0xC1 | 0xD1 => {
                         self.cmp(&instruction.code);
                     }
+                    /* DEC - Decrement Memory By One */
+                    0xCE | 0xDE | 0xC6 | 0xD6 => {
+                        self.dec(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
