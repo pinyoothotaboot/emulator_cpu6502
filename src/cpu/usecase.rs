@@ -271,6 +271,10 @@ impl CPU {
                     0x29 | 0x2D | 0x3D | 0x39 | 0x25 | 0x35 | 0x21 | 0x31 => {
                         self.and(&instruction.code);
                     }
+                    /* ASL - Arithmetic Shift Left */
+                    0x0A | 0x0E | 0x1E | 0x06 | 0x16 => {
+                        self.asl(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
