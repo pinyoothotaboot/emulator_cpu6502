@@ -255,6 +255,10 @@ impl CPU {
                     0x60 => {
                         self.rts();
                     }
+                    /* BRK - Break Command */
+                    0x00 => {
+                        self.brk();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
