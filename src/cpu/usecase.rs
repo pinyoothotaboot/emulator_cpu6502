@@ -263,6 +263,10 @@ impl CPU {
                     0x40 => {
                         self.rti();
                     }
+                    /* ADC - Add Memory to Accumulator with Carry */
+                    0x69 | 0x6D | 0x7D | 0x79 | 0x65 | 0x75 | 0x61 | 0x71  => {
+                        self.adc(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
