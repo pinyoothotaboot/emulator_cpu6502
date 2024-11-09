@@ -259,6 +259,10 @@ impl CPU {
                     0x00 => {
                         self.brk();
                     }
+                    /* RTI - Return From Interrupt */
+                    0x40 => {
+                        self.rti();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
