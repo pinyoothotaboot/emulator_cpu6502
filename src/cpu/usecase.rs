@@ -279,6 +279,10 @@ impl CPU {
                     0x2C | 0x24  => {
                         self.bit(&instruction.code);
                     }
+                    /* CMP - Compare Memory and Accumulator */
+                    0xC9 | 0xCD | 0xDD | 0xD9 | 0xC5 | 0xD5 | 0xC1 | 0xD1 => {
+                        self.cmp(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
