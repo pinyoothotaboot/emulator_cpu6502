@@ -287,6 +287,10 @@ impl CPU {
                     0xCE | 0xDE | 0xC6 | 0xD6 => {
                         self.dec(&instruction.code);
                     }
+                    /* EOR - "Exclusive OR" Memory with Accumulator */
+                    0x49 | 0x4D | 0x5D | 0x59 | 0x45 | 0x55 | 0x41 | 0x51 => {
+                        self.eor(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
