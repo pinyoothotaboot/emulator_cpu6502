@@ -275,6 +275,10 @@ impl CPU {
                     0x0A | 0x0E | 0x1E | 0x06 | 0x16 => {
                         self.asl(&instruction.code);
                     }
+                    /* BIT - Test Bits in Memory with Accumulator */
+                    0x2C | 0x24  => {
+                        self.bit(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
