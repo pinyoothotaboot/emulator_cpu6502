@@ -307,6 +307,10 @@ impl CPU {
                     0x6A | 0x6E | 0x7E | 0x66 | 0x76 => {
                         self.ror(&instruction.code);
                     }
+                    /* SBC - Subtract Memory from Accumulator with Borrow */
+                    0xE9 | 0xED | 0xFD | 0xF9 | 0xE5 | 0xF5 | 0xE1 | 0xF1 => {
+                        self.sbc(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
