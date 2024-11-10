@@ -6,3 +6,4 @@ pub mod cmp;
 pub mod dec;
 pub mod eor;
 pub mod lsr;
+pub mod ora;
