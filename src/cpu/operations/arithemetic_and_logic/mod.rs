@@ -7,3 +7,4 @@ pub mod dec;
 pub mod eor;
 pub mod lsr;
 pub mod ora;
+pub mod rol;
