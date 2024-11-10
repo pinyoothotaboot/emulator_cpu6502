@@ -8,3 +8,4 @@ pub mod bvc;
 pub mod jmp;
 pub mod jsr;
 pub mod rts;
+pub mod bvs;

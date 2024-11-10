@@ -311,6 +311,10 @@ impl CPU {
                     0xE9 | 0xED | 0xFD | 0xF9 | 0xE5 | 0xF5 | 0xE1 | 0xF1 => {
                         self.sbc(&instruction.code);
                     }
+                    /* BVS - Branch on Overflow Set */
+                    0x70 => {
+                        self.bvs();
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
