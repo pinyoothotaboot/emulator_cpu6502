@@ -299,6 +299,10 @@ impl CPU {
                     0x09 | 0x0D | 0x1D | 0x19 | 0x05 | 0x15 | 0x01 | 0x11 => {
                         self.ora(&instruction.code);
                     }
+                    /* ROL - Rotate Left */
+                    0x2A | 0x2E | 0x3E | 0x26 | 0x36 => {
+                        self.rol(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
