@@ -295,6 +295,10 @@ impl CPU {
                     0x4A | 0x4E | 0x5E | 0x46 | 0x56 => {
                         self.lsr(&instruction.code);
                     }
+                    /* ORA - "OR" Memory with Accumulator */
+                    0x09 | 0x0D | 0x1D | 0x19 | 0x05 | 0x15 | 0x01 | 0x11 => {
+                        self.ora(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
