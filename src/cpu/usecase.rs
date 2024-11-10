@@ -303,6 +303,10 @@ impl CPU {
                     0x2A | 0x2E | 0x3E | 0x26 | 0x36 => {
                         self.rol(&instruction.code);
                     }
+                    /* ROR - Rotate Right */
+                    0x6A | 0x6E | 0x7E | 0x66 | 0x76 => {
+                        self.ror(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }
