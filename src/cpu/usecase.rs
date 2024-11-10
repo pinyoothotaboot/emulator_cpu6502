@@ -291,6 +291,10 @@ impl CPU {
                     0x49 | 0x4D | 0x5D | 0x59 | 0x45 | 0x55 | 0x41 | 0x51 => {
                         self.eor(&instruction.code);
                     }
+                    /* LSR - Logical Shift Right */
+                    0x4A | 0x4E | 0x5E | 0x46 | 0x56 => {
+                        self.lsr(&instruction.code);
+                    }
                     _ => {
                         self.state = State::Fetch;
                     }

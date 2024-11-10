@@ -5,3 +5,4 @@ pub mod bit;
 pub mod cmp;
 pub mod dec;
 pub mod eor;
+pub mod lsr;
