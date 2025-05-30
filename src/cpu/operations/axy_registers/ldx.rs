@@ -2,39 +2,39 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * LDX - Load Index Register X From Memory
-       Operation: M → X
-       
-       Load the index register X from memory.
-       
-       LDX does not affect the C or V flags; sets Z if the value loaded was zero, otherwise resets it; 
-       sets N if the value loaded in bit 7 is a 1; otherwise N is reset, and affects only the X register.
-       
-       Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
-       Immediate	                LDX #$nn	         $A2	    2	        2
-       Absolute	                    LDX $nnnn	         $AE	    3	        4
-       Y-Indexed Absolute	        LDX $nnnn,Y	         $BE	    3	        4+p
-       Zero Page	                LDX $nn	             $A6	    2	        3
-       Y-Indexed Zero Page	        LDX $nn,Y	         $B6	    2	        4
-       p: =1 if page is crossed.
+    * LDX - Load Index Register X From Memory
+      Operation: M → X
 
-       Processor Status register changes
-       Flag	Effect
-       Zero flag	    Set if the specified byte is zero, otherwise cleared.
-       Negative flag	Updated to the value of bit #7 of the specified byte.
-     */
+      Load the index register X from memory.
+
+      LDX does not affect the C or V flags; sets Z if the value loaded was zero, otherwise resets it;
+      sets N if the value loaded in bit 7 is a 1; otherwise N is reset, and affects only the X register.
+
+      Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
+      Immediate	                LDX #$nn	         $A2	    2	        2
+      Absolute	                    LDX $nnnn	         $AE	    3	        4
+      Y-Indexed Absolute	        LDX $nnnn,Y	         $BE	    3	        4+p
+      Zero Page	                LDX $nn	             $A6	    2	        3
+      Y-Indexed Zero Page	        LDX $nn,Y	         $B6	    2	        4
+      p: =1 if page is crossed.
+
+      Processor Status register changes
+      Flag	Effect
+      Zero flag	    Set if the specified byte is zero, otherwise cleared.
+      Negative flag	Updated to the value of bit #7 of the specified byte.
+    */
     pub fn ldx(&mut self, code: &u8) {
         match *code {
             /* Immediate */
             0xA2 => {
                 self.ldx_immediate();
                 self.ldx_run();
-            },
+            }
             /* Absolute */
             0xAE => {
                 self.ldx_absolute();
                 self.ldx_run();
-            },
+            }
             /* Y-Indexed Absolute */
             0xBE => {
                 let page_cross = self.ldx_absolute_y();
@@ -43,17 +43,17 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             /* Zero Page */
             0xA6 => {
                 self.ldx_zero_page();
                 self.ldx_run();
-            },
+            }
             /* Y-Indexed Zero Page */
             0xB6 => {
                 self.ldx_zero_page_y();
                 self.ldx_run();
-            },
+            }
             _ => {
                 self.state = State::Fetch;
             }
@@ -62,12 +62,12 @@ impl CPU {
 
     fn ldx_immediate(&mut self) {
         // PC + 1
-        self.pc +=1;
+        self.pc += 1;
         self.address = self.pc.clone();
         // Fetch Data
         self.data = self.read(&self.address);
         // PC + 2 : Next Instruction
-        self.pc +=1;
+        self.pc += 1;
     }
 
     fn ldx_zero_page(&mut self) {

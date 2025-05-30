@@ -2,38 +2,38 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * STY - Store Index Register Y In Memory
-       Operation: Y → M
-       
-       Transfer the value of the Y register to the addressed memory location.
-       
-       STY does not affect any flags or registers in the microprocessor.
-       
-       Addressing Mode	Assembly Language Form	Opcode	No. Bytes	No. Cycles
-       Absolute	            STY $nnnn	          $8C	    3	        4
-       Zero Page	        STY $nn	              $84	    2	        3
-       X-Indexed Zero Page	STY $nn,X	          $94	    2	        4
+    * STY - Store Index Register Y In Memory
+      Operation: Y → M
 
-       Processor Status register changes
-        Does not update any flags.
-     */
-    pub fn sty(&mut self,code : &u8) {
+      Transfer the value of the Y register to the addressed memory location.
+
+      STY does not affect any flags or registers in the microprocessor.
+
+      Addressing Mode	Assembly Language Form	Opcode	No. Bytes	No. Cycles
+      Absolute	            STY $nnnn	          $8C	    3	        4
+      Zero Page	        STY $nn	              $84	    2	        3
+      X-Indexed Zero Page	STY $nn,X	          $94	    2	        4
+
+      Processor Status register changes
+       Does not update any flags.
+    */
+    pub fn sty(&mut self, code: &u8) {
         match *code {
             /* Absolute */
             0x8C => {
                 self.sty_absolute();
                 self.sty_run();
-            },
+            }
             /* Zero Page */
             0x84 => {
                 self.sty_zero_page();
                 self.sty_run();
-            },
+            }
             /* X-Indexed Zero Page */
             0x94 => {
                 self.sty_zero_page_x();
                 self.sty_run();
-            },
+            }
             _ => {
                 self.state = State::Fetch;
             }
@@ -99,6 +99,6 @@ impl CPU {
 
     fn sty_run(&mut self) {
         let addr = self.address.clone();
-        self.write(&addr,self.y_register.clone());
+        self.write(&addr, self.y_register.clone());
     }
 }

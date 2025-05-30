@@ -2,39 +2,39 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * LDY - Load Index Register Y From Memory
-       Operation: M → Y
-       
-       Load the index register Y from memory.
-       
-       LDY does not affect the C or V flags, sets the N flag if the value loaded in bit 7 is a 1, 
-       otherwise resets N, sets Z flag if the loaded value is zero otherwise resets Z and only affects the Y register.
-       
-       Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
-       Immediate	                    LDY #$nn	     $A0	    2	        2
-       Absolute	                        LDY $nnnn	     $AC	    3	        4
-       X-Indexed Absolute	            LDY $nnnn,X	     $BC	    3	        4+p
-       Zero Page	                    LDY $nn 	     $A4	    2	        3
-       X-Indexed Zero Page	            LDY $nn,X	     $B4	    2	        4
-       p: =1 if page is crossed.
+    * LDY - Load Index Register Y From Memory
+      Operation: M → Y
 
-       Processor Status register changes
-       Flag	Effect
-       Zero flag	    Set if the specified byte is zero, otherwise cleared.
-       Negative flag	Updated to the value of bit #7 of the specified byte.
-     */
+      Load the index register Y from memory.
+
+      LDY does not affect the C or V flags, sets the N flag if the value loaded in bit 7 is a 1,
+      otherwise resets N, sets Z flag if the loaded value is zero otherwise resets Z and only affects the Y register.
+
+      Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
+      Immediate	                    LDY #$nn	     $A0	    2	        2
+      Absolute	                        LDY $nnnn	     $AC	    3	        4
+      X-Indexed Absolute	            LDY $nnnn,X	     $BC	    3	        4+p
+      Zero Page	                    LDY $nn 	     $A4	    2	        3
+      X-Indexed Zero Page	            LDY $nn,X	     $B4	    2	        4
+      p: =1 if page is crossed.
+
+      Processor Status register changes
+      Flag	Effect
+      Zero flag	    Set if the specified byte is zero, otherwise cleared.
+      Negative flag	Updated to the value of bit #7 of the specified byte.
+    */
     pub fn ldy(&mut self, code: &u8) {
         match *code {
             /* Immediate */
             0xA0 => {
                 self.ldy_immediate();
                 self.ldy_run();
-            },
+            }
             /* Absolute */
             0xAC => {
                 self.ldy_absolute();
                 self.ldy_run();
-            },
+            }
             /* X-Indexed Absolute */
             0xBC => {
                 let page_cross = self.ldy_absolute_x();
@@ -43,17 +43,17 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             /* Zero Page */
             0xA4 => {
                 self.ldy_zero_page();
                 self.ldy_run();
-            },
+            }
             /* X-Indexed Zero Page */
             0xB4 => {
                 self.ldy_zero_page_x();
                 self.ldy_run();
-            },
+            }
             _ => {
                 self.state = State::Fetch;
             }
@@ -62,12 +62,12 @@ impl CPU {
 
     fn ldy_immediate(&mut self) {
         // PC + 1
-        self.pc +=1;
+        self.pc += 1;
         self.address = self.pc.clone();
         // Fetch Data
         self.data = self.read(&self.address);
         // PC + 2 : Next Instruction
-        self.pc +=1;
+        self.pc += 1;
     }
 
     fn ldy_zero_page(&mut self) {

@@ -2,62 +2,62 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * STA - Store Accumulator in Memory
-       Operation: A → M
-       
-       This instruction transfers the contents of the accumulator to memory.
-       
-       This instruction affects none of the flags in the processor status register and does not affect the accumulator.
-       
-       Addressing Mode	            Assembly Language Form	Opcode	No. Bytes	No. Cycles
-       Absolute	                        STA $nnnn	         $8D	    3	        4
-       X-Indexed Absolute	            STA $nnnn,X	         $9D	    3	        5
-       Y-Indexed Absolute	            STA $nnnn,Y	         $99	    3	        5
-       Zero Page	                    STA $nn	             $85	    2	        3
-       X-Indexed Zero Page	            STA $nn,X	         $95	    2	        4
-       X-Indexed Zero Page Indirect	    STA ($nn,X)	         $81	    2	        6
-       Zero Page Indirect Y-Indexed	    STA ($nn),Y	         $91	    2	        6
+    * STA - Store Accumulator in Memory
+      Operation: A → M
 
-       Processor Status register changes
-        Does not update any flags.
-     */
-    pub fn sta(&mut self,code : &u8) {
+      This instruction transfers the contents of the accumulator to memory.
+
+      This instruction affects none of the flags in the processor status register and does not affect the accumulator.
+
+      Addressing Mode	            Assembly Language Form	Opcode	No. Bytes	No. Cycles
+      Absolute	                        STA $nnnn	         $8D	    3	        4
+      X-Indexed Absolute	            STA $nnnn,X	         $9D	    3	        5
+      Y-Indexed Absolute	            STA $nnnn,Y	         $99	    3	        5
+      Zero Page	                    STA $nn	             $85	    2	        3
+      X-Indexed Zero Page	            STA $nn,X	         $95	    2	        4
+      X-Indexed Zero Page Indirect	    STA ($nn,X)	         $81	    2	        6
+      Zero Page Indirect Y-Indexed	    STA ($nn),Y	         $91	    2	        6
+
+      Processor Status register changes
+       Does not update any flags.
+    */
+    pub fn sta(&mut self, code: &u8) {
         match *code {
             /* Absolute */
             0x8D => {
                 self.sta_absolute();
                 self.sta_run();
-            },
+            }
             /* X-Indexed Absolute */
             0x9D => {
                 self.sta_absolute_x();
                 self.sta_run();
-            },
+            }
             /* Y-Indexed Absolute */
             0x99 => {
                 self.sta_absolute_y();
                 self.sta_run();
-            },
+            }
             /* Zero Page */
             0x85 => {
                 self.sta_zero_page();
                 self.sta_run();
-            },
+            }
             /* X-Indexed Zero Page */
             0x95 => {
                 self.sta_zero_page_x();
                 self.sta_run();
-            },
+            }
             /* X-Indexed Zero Page Indirect */
             0x81 => {
                 self.sta_indirect_x();
                 self.sta_run();
-            },
+            }
             /* Zero Page Indirect Y-Indexed */
             0x91 => {
                 self.sta_indirect_y();
                 self.sta_run();
-            },
+            }
             _ => {
                 self.state = State::Fetch;
             }
@@ -251,6 +251,6 @@ impl CPU {
     fn sta_run(&mut self) {
         let accumulator = self.accumulator.clone();
         let addr = self.address.clone();
-        self.write(&addr,accumulator);
+        self.write(&addr, accumulator);
     }
 }

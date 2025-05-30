@@ -20,7 +20,7 @@ impl CPU {
             cycles: 0x0000,
             state: State::Fetch,
             bus: Bus::new(),
-            sp : 0x00
+            sp: 0x00,
         }
     }
 
@@ -264,7 +264,7 @@ impl CPU {
                         self.rti();
                     }
                     /* ADC - Add Memory to Accumulator with Carry */
-                    0x69 | 0x6D | 0x7D | 0x79 | 0x65 | 0x75 | 0x61 | 0x71  => {
+                    0x69 | 0x6D | 0x7D | 0x79 | 0x65 | 0x75 | 0x61 | 0x71 => {
                         self.adc(&instruction.code);
                     }
                     /* AND - "AND" Memory with Accumulator */
@@ -276,7 +276,7 @@ impl CPU {
                         self.asl(&instruction.code);
                     }
                     /* BIT - Test Bits in Memory with Accumulator */
-                    0x2C | 0x24  => {
+                    0x2C | 0x24 => {
                         self.bit(&instruction.code);
                     }
                     /* CMP - Compare Memory and Accumulator */

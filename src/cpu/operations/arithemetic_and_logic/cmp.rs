@@ -2,42 +2,42 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * CMP - Compare Memory and Accumulator
-        Operation: A - M
+    * CMP - Compare Memory and Accumulator
+       Operation: A - M
 
-        This instruction subtracts the contents of memory from the contents of the accumulator.
+       This instruction subtracts the contents of memory from the contents of the accumulator.
 
-        The use of the CMP affects the following flags: Z flag is set on an equal comparison, reset otherwise; the N flag is set or reset by the result bit 7, the carry flag is set when the value in memory is less than or equal to the accumulator, reset when it is greater than the accumulator. The accumulator is not affected.
+       The use of the CMP affects the following flags: Z flag is set on an equal comparison, reset otherwise; the N flag is set or reset by the result bit 7, the carry flag is set when the value in memory is less than or equal to the accumulator, reset when it is greater than the accumulator. The accumulator is not affected.
 
-        Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
-        Immediate	                    CMP #$nn	      $C9	    2	        2
-        Absolute	                    CMP $nnnn	      $CD	    3	        4
-        X-Indexed Absolute	            CMP $nnnn,X	      $DD	    3	        4+p
-        Y-Indexed Absolute	            CMP $nnnn,Y	      $D9	    3	        4+p
-        Zero Page	                    CMP $nn	          $C5	    2	        3
-        X-Indexed Zero Page	            CMP $nn,X	      $D5	    2	        4
-        X-Indexed Zero Page Indirect	CMP ($nn,X)	      $C1	    2	        6
-        Zero Page Indirect Y-Indexed	CMP ($nn),Y	      $D1	    2	        5+p
-        p: =1 if page is crossed.
+       Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
+       Immediate	                    CMP #$nn	      $C9	    2	        2
+       Absolute	                    CMP $nnnn	      $CD	    3	        4
+       X-Indexed Absolute	            CMP $nnnn,X	      $DD	    3	        4+p
+       Y-Indexed Absolute	            CMP $nnnn,Y	      $D9	    3	        4+p
+       Zero Page	                    CMP $nn	          $C5	    2	        3
+       X-Indexed Zero Page	            CMP $nn,X	      $D5	    2	        4
+       X-Indexed Zero Page Indirect	CMP ($nn,X)	      $C1	    2	        6
+       Zero Page Indirect Y-Indexed	CMP ($nn),Y	      $D1	    2	        5+p
+       p: =1 if page is crossed.
 
-        Processor Status register changes
-        Flag	Effect
-        Carry flag	Set if the value in the Accumulator is greater than or equal to the operand byte, otherwise cleared.
-        Zero flag	Set if the value in the Accumulator is equal to the operand byte, otherwise cleared.
-        Negative flag	Updated to the value of bit #7 of the result.
-     */
-    pub fn cmp(&mut self,code : &u8) {
+       Processor Status register changes
+       Flag	Effect
+       Carry flag	Set if the value in the Accumulator is greater than or equal to the operand byte, otherwise cleared.
+       Zero flag	Set if the value in the Accumulator is equal to the operand byte, otherwise cleared.
+       Negative flag	Updated to the value of bit #7 of the result.
+    */
+    pub fn cmp(&mut self, code: &u8) {
         match *code {
             /* Immediate */
             0xC9 => {
                 self.cmp_immediate();
                 self.cmp_run();
-            },
+            }
             /* Absolute */
             0xCD => {
                 self.cmp_absolute();
                 self.cmp_run();
-            },
+            }
             /* X-Indexed Absolute */
             0xDD => {
                 let page_cross = self.cmp_absolute_x();
@@ -46,7 +46,7 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             /* Y-Indexed Absolute */
             0xD9 => {
                 let page_cross = self.cmp_absolute_y();
@@ -55,22 +55,22 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             /* Zero Page */
             0xC5 => {
                 self.cmp_zero_page();
                 self.cmp_run();
-            },
+            }
             /* X-Indexed Zero Page */
             0xD5 => {
                 self.cmp_zero_page_x();
                 self.cmp_run();
-            },
+            }
             /* X-Indexed Zero Page Indirect */
             0xC1 => {
                 self.cmp_indirect_x();
                 self.cmp_run();
-            },
+            }
             /* Zero Page Indirect Y-Indexed */
             0xD1 => {
                 let page_cross = self.cmp_indirect_y();
@@ -79,7 +79,7 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             _ => {
                 self.state = State::Fetch;
             }
@@ -88,12 +88,12 @@ impl CPU {
 
     fn cmp_immediate(&mut self) {
         // PC + 1
-        self.pc +=1;
+        self.pc += 1;
         self.address = self.pc.clone();
         // Fetch Data
         self.data = self.read(&self.address);
         // PC + 2 : Next Instruction
-        self.pc +=1;
+        self.pc += 1;
     }
 
     fn cmp_absolute(&mut self) {
@@ -184,7 +184,7 @@ impl CPU {
         return self.page_cross(current_addr, current_addr + new_addr);
     }
 
-    fn cmp_zero_page(&mut self) { 
+    fn cmp_zero_page(&mut self) {
         // PC + 1
         self.pc += 1;
         self.address = self.pc.clone();
@@ -281,7 +281,7 @@ impl CPU {
     }
 
     fn cmp_run(&mut self) {
-        let temp : u8 = self.accumulator - self.data;
+        let temp: u8 = self.accumulator - self.data;
 
         // Set if the value in the Accumulator is greater than or equal to the operand byte, otherwise cleared.
         if self.accumulator >= self.data {
