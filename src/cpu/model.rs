@@ -85,5 +85,5 @@ pub struct CPU {
     pub state: State,
     pub bus: Bus,
     /* Stack Pointer */
-    pub sp : u8
+    pub sp: u8,
 }

@@ -2,25 +2,25 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * BMI - Branch on Result Minus
-        Operation: Branch on N = 1
+    * BMI - Branch on Result Minus
+       Operation: Branch on N = 1
 
-        This instruction takes the conditional branch if the N bit is set.
+       This instruction takes the conditional branch if the N bit is set.
 
-        BMI does not affect any of the flags or any other part of the machine other than the program counter and then only if the N bit is on.
+       BMI does not affect any of the flags or any other part of the machine other than the program counter and then only if the N bit is on.
 
-        Addressing Mode	Assembly Language Form	Opcode	No. Bytes	No. Cycles
-        Relative	        BMI $nnnn	          $30	    2	        2+t+p
-        p: =1 if page is crossed.
-        t: =1 if branch is taken.
-     */
+       Addressing Mode	Assembly Language Form	Opcode	No. Bytes	No. Cycles
+       Relative	        BMI $nnnn	          $30	    2	        2+t+p
+       p: =1 if page is crossed.
+       t: =1 if branch is taken.
+    */
     pub fn bmi(&mut self) {
         self.bmi_relative();
         self.bmi_run();
     }
 
     fn bmi_relative(&mut self) {
-        self.pc +=1;
+        self.pc += 1;
         self.address = self.pc.clone();
         // Fetch Branch Offset
         self.data = self.read(&self.address);

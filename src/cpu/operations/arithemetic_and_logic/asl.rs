@@ -2,39 +2,39 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * ASL - Arithmetic Shift Left
-        Operation: C ← /M7...M0/ ← 0
+    * ASL - Arithmetic Shift Left
+       Operation: C ← /M7...M0/ ← 0
 
-        The shift left instruction shifts either the accumulator or the address memory location 1 bit to the left, with the bit 0 always being set to 0 and the input bit 7 being stored in the carry flag. ASL either shifts the accumulator left 1 bit or is a read/modify/write instruction that affects only memory.
+       The shift left instruction shifts either the accumulator or the address memory location 1 bit to the left, with the bit 0 always being set to 0 and the input bit 7 being stored in the carry flag. ASL either shifts the accumulator left 1 bit or is a read/modify/write instruction that affects only memory.
 
-        The instruction does not affect the overflow bit, sets N equal to the result bit 7 (bit 6 in the input), sets Z flag if the result is equal to 0, otherwise resets Z and stores the input bit 7 in the carry flag.
+       The instruction does not affect the overflow bit, sets N equal to the result bit 7 (bit 6 in the input), sets Z flag if the result is equal to 0, otherwise resets Z and stores the input bit 7 in the carry flag.
 
-        Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
-        Accumulator	                ASL A	              $0A	    1	        2
-        Absolute	                ASL $nnnn	          $0E	    3	        6
-        X-Indexed Absolute	        ASL $nnnn,X	          $1E	    3	        7
-        Zero Page	                ASL $nn 	          $06	    2	        5
-        X-Indexed Zero Page	        ASL $nn,X	          $16	    2	        6
+       Addressing Mode	        Assembly Language Form	Opcode	No. Bytes	No. Cycles
+       Accumulator	                ASL A	              $0A	    1	        2
+       Absolute	                ASL $nnnn	          $0E	    3	        6
+       X-Indexed Absolute	        ASL $nnnn,X	          $1E	    3	        7
+       Zero Page	                ASL $nn 	          $06	    2	        5
+       X-Indexed Zero Page	        ASL $nn,X	          $16	    2	        6
 
-        Processor Status register changes
-        Flag	Effect
-        Zero flag	Set if the shifted byte is zero, otherwise cleared.
-        Negative flag	Set to the value of bit #7 in the shifted byte.
-        Carry flag	The old value of bit #7 is stored here.
-     */
+       Processor Status register changes
+       Flag	Effect
+       Zero flag	Set if the shifted byte is zero, otherwise cleared.
+       Negative flag	Set to the value of bit #7 in the shifted byte.
+       Carry flag	The old value of bit #7 is stored here.
+    */
 
-    pub fn asl(&mut self,code : &u8) {
+    pub fn asl(&mut self, code: &u8) {
         match *code {
             /* Accumulator */
             0x0A => {
                 self.asl_accumulator();
                 self.asl_accumulator_run();
-            },
+            }
             /* Absolute */
             0x0E => {
                 self.asl_absolute();
                 self.asl_run();
-            },
+            }
             /* X-Indexed Absolute */
             0x1E => {
                 let page_cross = self.asl_absolute_x();
@@ -43,17 +43,17 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             /* Zero Page */
             0x06 => {
                 self.asl_zero_page();
                 self.asl_run();
-            },
+            }
             /* X-Indexed Zero Page */
             0x16 => {
                 self.asl_zero_page_x();
                 self.asl_run();
-            },
+            }
             _ => {
                 self.state = State::Fetch;
             }
@@ -62,7 +62,7 @@ impl CPU {
 
     fn asl_accumulator(&mut self) {
         self.data = self.accumulator.clone();
-        self.pc +=1;
+        self.pc += 1;
     }
 
     fn asl_accumulator_run(&mut self) {
@@ -91,7 +91,7 @@ impl CPU {
         self.accumulator = (temp & 0x00FF) as u8;
     }
 
-    fn asl_zero_page(&mut self) { 
+    fn asl_zero_page(&mut self) {
         // PC + 1
         self.pc += 1;
         self.address = self.pc.clone();
@@ -203,6 +203,6 @@ impl CPU {
         }
 
         let addr = self.address.clone();
-        self.write(&addr,(temp & 0x00FF) as u8);
+        self.write(&addr, (temp & 0x00FF) as u8);
     }
 }

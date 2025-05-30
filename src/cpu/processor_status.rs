@@ -80,7 +80,7 @@ impl ProcessorStatus {
         self.V = 0x00;
     }
 
-    pub fn get_overflow(&self) ->u8 {
+    pub fn get_overflow(&self) -> u8 {
         return self.V.clone();
     }
 
@@ -145,7 +145,7 @@ impl ProcessorStatus {
     }
 
     pub fn get_carry(&self) -> u8 {
-        return self.C.clone()
+        return self.C.clone();
     }
 
     pub fn set_negative(&mut self) {
@@ -156,7 +156,7 @@ impl ProcessorStatus {
         self.N = 0x00;
     }
 
-    pub fn get_negative(&self) ->u8 {
+    pub fn get_negative(&self) -> u8 {
         return self.N.clone();
     }
 }

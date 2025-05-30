@@ -2,41 +2,41 @@ use crate::cpu::model::{State, CPU};
 
 impl CPU {
     /**
-     * AND - "AND" Memory with Accumulator
-        Operation: A ∧ M → A
+    * AND - "AND" Memory with Accumulator
+       Operation: A ∧ M → A
 
-        The AND instruction transfer the accumulator and memory to the adder which performs a bit-by-bit AND operation and stores the result back in the accumulator.
+       The AND instruction transfer the accumulator and memory to the adder which performs a bit-by-bit AND operation and stores the result back in the accumulator.
 
-        This instruction affects the accumulator; sets the zero flag if the result in the accumulator is 0, otherwise resets the zero flag; sets the negative flag if the result in the accumulator has bit 7 on, otherwise resets the negative flag.
+       This instruction affects the accumulator; sets the zero flag if the result in the accumulator is 0, otherwise resets the zero flag; sets the negative flag if the result in the accumulator has bit 7 on, otherwise resets the negative flag.
 
-        Addressing Mode	            Assembly Language Form	Opcode	No. Bytes	No. Cycles
-        Immediate	                    AND #$nn	          $29	    2	        2
-        Absolute	                    AND $nnnn	          $2D	    3	        4
-        X-Indexed Absolute	            AND $nnnn,X	          $3D	    3	        4+p
-        Y-Indexed Absolute	            AND $nnnn,Y	          $39	    3	        4+p
-        Zero Page	                    AND $nn	              $25	    2	        3
-        X-Indexed Zero Page            	AND $nn,X	          $35	    2	        4
-        X-Indexed Zero Page Indirect	AND ($nn,X)	          $21	    2	        6
-        Zero Page Indirect Y-Indexed	AND ($nn),Y	          $31	    2	        5+p
-        p: =1 if page is crossed.
+       Addressing Mode	            Assembly Language Form	Opcode	No. Bytes	No. Cycles
+       Immediate	                    AND #$nn	          $29	    2	        2
+       Absolute	                    AND $nnnn	          $2D	    3	        4
+       X-Indexed Absolute	            AND $nnnn,X	          $3D	    3	        4+p
+       Y-Indexed Absolute	            AND $nnnn,Y	          $39	    3	        4+p
+       Zero Page	                    AND $nn	              $25	    2	        3
+       X-Indexed Zero Page            	AND $nn,X	          $35	    2	        4
+       X-Indexed Zero Page Indirect	AND ($nn,X)	          $21	    2	        6
+       Zero Page Indirect Y-Indexed	AND ($nn),Y	          $31	    2	        5+p
+       p: =1 if page is crossed.
 
-        Processor Status register changes
-        Flag	Effect
-        Zero flag	Set if the result is zero, otherwise cleared.
-        Negative flag	Updated to the value of bit #7 of the result.
-     */
-    pub fn and(&mut self,code : &u8) {
+       Processor Status register changes
+       Flag	Effect
+       Zero flag	Set if the result is zero, otherwise cleared.
+       Negative flag	Updated to the value of bit #7 of the result.
+    */
+    pub fn and(&mut self, code: &u8) {
         match *code {
             /* Immediate */
             0x29 => {
                 self.and_immediate();
                 self.and_run();
-            },
+            }
             /* Absolute */
             0x2D => {
                 self.and_absolute();
                 self.and_run();
-            },
+            }
             /* X-Indexed Absolute */
             0x3D => {
                 let page_cross = self.and_absolute_x();
@@ -45,7 +45,7 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             /* Y-Indexed Absolute */
             0x39 => {
                 let page_cross = self.and_absolute_y();
@@ -54,22 +54,22 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             /* Zero Page */
             0x25 => {
                 self.and_zero_page();
                 self.and_run();
-            },
+            }
             /* X-Indexed Zero Page */
             0x35 => {
                 self.and_zero_page_x();
                 self.and_run();
-            },
+            }
             /* X-Indexed Zero Page Indirect */
             0x21 => {
                 self.and_indirect_x();
                 self.and_run();
-            },
+            }
             /* Zero Page Indirect Y-Indexed */
             0x31 => {
                 let page_cross = self.and_indirect_y();
@@ -78,7 +78,7 @@ impl CPU {
                 if page_cross {
                     // TODO :: Tick
                 }
-            },
+            }
             _ => {
                 self.state = State::Fetch;
             }
@@ -87,12 +87,12 @@ impl CPU {
 
     fn and_immediate(&mut self) {
         // PC + 1
-        self.pc +=1;
+        self.pc += 1;
         self.address = self.pc.clone();
         // Fetch Data
         self.data = self.read(&self.address);
         // PC + 2 : Next Instruction
-        self.pc +=1;
+        self.pc += 1;
     }
 
     fn and_absolute(&mut self) {
@@ -181,9 +181,9 @@ impl CPU {
 
         // Calculate Page Cross
         return self.page_cross(current_addr, current_addr + new_addr);
-   }
+    }
 
-    fn and_zero_page(&mut self) { 
+    fn and_zero_page(&mut self) {
         // PC + 1
         self.pc += 1;
         self.address = self.pc.clone();

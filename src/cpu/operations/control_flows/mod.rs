@@ -5,7 +5,7 @@ pub mod bmi;
 pub mod bne;
 pub mod bpl;
 pub mod bvc;
+pub mod bvs;
 pub mod jmp;
 pub mod jsr;
 pub mod rts;
-pub mod bvs;
